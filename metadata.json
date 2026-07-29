@@ -1,0 +1,6 @@
+{
+  "name": "AI Auto Photo Namer (自動写真命名カメラ)",
+  "description": "AI-powered camera app that automatically generates smart file names for receipts, pets, products, and documents using Gemini Vision.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
