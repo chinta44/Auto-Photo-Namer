@@ -138,7 +138,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased selection:bg-yellow-400 selection:text-indigo-950">
+    <div className="min-h-screen bg-[#1A1A1A] text-[#F2F0EC] flex flex-col font-sans antialiased selection:bg-[#7FDBCA] selection:text-[#0F1E1C]">
       {/* Navigation Header */}
       <Header
         activeTab={activeTab}
@@ -148,13 +148,13 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full space-y-6">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full space-y-6 pb-24 md:pb-8">
         {analysisError && (
-          <div className="p-4 bg-red-100 border-2 border-red-400 text-red-900 rounded-2xl text-xs font-bold flex items-center justify-between shadow-sm">
+          <div className="p-4 bg-[#2C1414] border border-[#7A2E2E] text-[#F0B8B8] rounded-xl text-xs font-medium flex items-center justify-between">
             <span>{analysisError}</span>
             <button
               onClick={() => setAnalysisError(null)}
-              className="text-red-700 font-black hover:underline"
+              className="text-[#F0B8B8] font-semibold hover:underline shrink-0 ml-3"
             >
               閉じる
             </button>
@@ -214,9 +214,9 @@ export default function App() {
       )}
 
       {/* Simple Footer */}
-      <footer className="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500 font-medium">
-        <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <footer className="hidden md:block py-6 border-t border-[#3A3A3A] bg-[#1A1A1A] text-center text-xs text-[#9A9890] font-medium">
+        <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2 font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#7FDBCA]"></span>
           SmartName AI — Google Gemini Vision API (完全無料モデル対応)
         </p>
       </footer>
