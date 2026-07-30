@@ -93,6 +93,42 @@ npm run start
 
 ---
 
+## 🌐 Render (render.com) へのデプロイ手順
+
+無料クラウドプラットフォーム **Render** を使うと、GitHubにアップロードしたリポジトリから数クリックでアプリを無料公開できます。
+
+### 1. Renderにサインイン
+[Render (render.com)](https://render.com/) にアクセスし、GitHubアカウントでログインします。
+
+### 2. 新しい Web Service を作成
+1. ダッシュボードで **「New +」** ボタンをクリックし、**「Web Service」** を選択します。
+2. GitHubリポジトリ一覧から `smartname-ai` （本リポジトリ）を選択して **Connect** をクリックします。
+
+### 3. 設定項目の入力
+以下の内容を設定します：
+
+- **Name**: `smartname-ai` (任意のお好きな名前)
+- **Language**: `Node`
+- **Branch**: `main` (または `master`)
+- **Region**: 最寄りの地域（例: `Singapore` など）
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm run start`
+- **Instance Type**: `Free` (無料プラン)
+
+### 4. 環境変数 (Environment Variables) の設定
+画面下の **Environment Variables** セクションで以下を追加します：
+
+| Key | Value | 説明 |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | `AIzaSy...` | Google AI Studioで取得したAPIキー |
+| `NODE_ENV` | `production` | 本番環境モード指定 |
+
+### 5. デプロイ実行
+1. **「Create Web Service」** をクリックします。
+2. 自動的にビルドとデプロイが開始され、数分後に `https://smartname-ai.onrender.com` のような公開URLが生成されます！
+
+---
+
 ## 📂 プロジェクト構造
 
 ```text
