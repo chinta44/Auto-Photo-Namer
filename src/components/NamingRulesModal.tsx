@@ -17,25 +17,25 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-xl text-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md">
-            <Settings className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold shadow-sm">
+            <Settings className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-black text-lg text-slate-900 uppercase tracking-tight">AI自動命名ルールのカスタマイズ</h2>
-            <p className="text-xs text-slate-600 font-medium">
+            <h2 className="font-bold text-base text-white tracking-tight">AI自動命名ルールのカスタマイズ</h2>
+            <p className="text-xs text-slate-400 font-medium">
               日付フォーマットや区切り記号、カテゴリ情報を含めるかどうかなど、生成ファイル名のルールのカスタマイズが可能です。
             </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 space-y-5 shadow-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6 shadow-xl text-slate-100">
         {/* Date Format */}
         <div className="space-y-2">
-          <label className="text-xs font-black text-slate-800 uppercase tracking-tight">日付の書き方:</label>
-          <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+          <label className="text-xs font-bold text-slate-300">日付の書き方:</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold">
             {[
               { id: 'YYYYMMDD', label: '20260729 (8桁数字)' },
               { id: 'YYYY-MM-DD', label: '2026-07-29 (ハイフン)' },
@@ -44,10 +44,10 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
               <button
                 key={item.id}
                 onClick={() => handleChange('dateFormat', item.id as any)}
-                className={`py-2 px-3 rounded-xl border-2 text-center transition-all ${
+                className={`py-2.5 px-3 rounded-xl border text-center transition-all ${
                   config.dateFormat === item.id
-                    ? 'bg-indigo-600 border-indigo-600 text-white font-black shadow-sm'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'
+                    ? 'bg-indigo-600 border-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
                 {item.label}
@@ -58,8 +58,8 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
 
         {/* Separator */}
         <div className="space-y-2">
-          <label className="text-xs font-black text-slate-800 uppercase tracking-tight">単語の区切り文字:</label>
-          <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+          <label className="text-xs font-bold text-slate-300">単語の区切り文字:</label>
+          <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
             {[
               { id: '_', label: '_ (アンダースコア)' },
               { id: '-', label: '- (ハイフン)' },
@@ -68,10 +68,10 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
               <button
                 key={item.id}
                 onClick={() => handleChange('separator', item.id as any)}
-                className={`py-2 px-3 rounded-xl border-2 text-center transition-all ${
+                className={`py-2.5 px-3 rounded-xl border text-center transition-all ${
                   config.separator === item.id
-                    ? 'bg-indigo-600 border-indigo-600 text-white font-black shadow-sm'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'
+                    ? 'bg-indigo-600 border-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
                 {item.label}
@@ -81,11 +81,11 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
         </div>
 
         {/* Option toggles */}
-        <div className="space-y-3 pt-2 border-t-2 border-slate-200">
-          <label className="flex items-center justify-between cursor-pointer p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors">
+        <div className="space-y-3 pt-4 border-t border-slate-800">
+          <label className="flex items-center justify-between cursor-pointer p-3 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-colors">
             <div>
-              <p className="text-xs font-black text-slate-900">ファイル名に「カテゴリ名（領収書/商品等）」を含める</p>
-              <p className="text-[11px] text-slate-500 font-semibold">例: 20260729_領収書_セブンイレブン.jpg</p>
+              <p className="text-xs font-bold text-white">ファイル名に「カテゴリ名（領収書/商品等）」を含める</p>
+              <p className="text-[11px] text-slate-400 font-medium">例: 20260729_領収書_セブンイレブン.jpg</p>
             </div>
             <input
               type="checkbox"
@@ -95,10 +95,10 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
             />
           </label>
 
-          <label className="flex items-center justify-between cursor-pointer p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors">
+          <label className="flex items-center justify-between cursor-pointer p-3 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-colors">
             <div>
-              <p className="text-xs font-black text-slate-900">領収書の場合、金額もファイル名に自動挿入する</p>
-              <p className="text-[11px] text-slate-500 font-semibold">例: セブンイレブン_1280円.jpg</p>
+              <p className="text-xs font-bold text-white">領収書の場合、金額もファイル名に自動挿入する</p>
+              <p className="text-[11px] text-slate-400 font-medium">例: セブンイレブン_1280円.jpg</p>
             </div>
             <input
               type="checkbox"
@@ -110,12 +110,12 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
         </div>
 
         {/* Preview example */}
-        <div className="p-3 bg-indigo-950 rounded-xl border-2 border-indigo-600 space-y-1 shadow-sm">
-          <div className="flex items-center gap-1.5 text-xs text-yellow-400 font-black uppercase tracking-wider">
+        <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-1.5 shadow-inner">
+          <div className="flex items-center gap-1.5 text-xs text-indigo-400 font-mono font-bold tracking-wider">
             <FileCode className="w-4 h-4" />
-            命名設定のプレビュー例:
+            LIVE PREVIEW (命名設定のプレビュー):
           </div>
-          <p className="font-mono text-xs text-yellow-400 font-black">
+          <p className="font-mono text-sm text-emerald-400 font-bold bg-slate-900 p-3 rounded-xl border border-slate-800/80">
             {config.dateFormat === 'YYYYMMDD' ? '20260729' : config.dateFormat === 'YYYY-MM-DD' ? '2026-07-29' : ''}
             {config.dateFormat !== 'None' ? config.separator : ''}
             {config.includeCategory ? `領収書${config.separator}` : ''}

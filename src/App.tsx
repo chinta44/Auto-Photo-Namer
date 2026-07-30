@@ -138,7 +138,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased selection:bg-yellow-400 selection:text-indigo-950">
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-600 selection:text-white">
       {/* Navigation Header */}
       <Header
         activeTab={activeTab}
@@ -148,13 +148,13 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 p-2 sm:p-4 md:p-6 max-w-6xl mx-auto w-full space-y-4">
+      <main className="flex-1 p-3 sm:p-5 md:p-8 max-w-6xl mx-auto w-full space-y-6">
         {analysisError && (
-          <div className="p-4 bg-red-100 border-2 border-red-400 text-red-900 rounded-2xl text-xs font-bold flex items-center justify-between shadow-sm">
+          <div className="p-4 bg-red-950/60 border border-red-800 text-red-200 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-xl backdrop-blur-md">
             <span>{analysisError}</span>
             <button
               onClick={() => setAnalysisError(null)}
-              className="text-red-700 font-black hover:underline"
+              className="text-red-400 font-bold hover:underline ml-2"
             >
               閉じる
             </button>
@@ -213,11 +213,11 @@ export default function App() {
         />
       )}
 
-      {/* Simple Footer */}
-      <footer className="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500 font-medium">
+      {/* Modern Footer */}
+      <footer className="py-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          SmartName AI — Google Gemini Vision API (完全無料モデル対応)
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          SmartName AI — Gemini Vision API (完全無料モデル対応 PWA)
         </p>
       </footer>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles } from 'lucide-react';
+import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles, Zap } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
@@ -15,35 +15,40 @@ export const Header: React.FC<HeaderProps> = ({
   petCount,
 }) => {
   return (
-    <header id="main-header" className="sticky top-0 z-40 bg-indigo-600 shadow-xl border-b border-indigo-700 text-white">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header id="main-header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 text-white shadow-2xl">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-md">
-            <Sparkles className="w-6 h-6 text-indigo-950 animate-pulse" />
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-indigo-500 rounded-xl blur opacity-60 group-hover:opacity-100 transition duration-300"></div>
+            <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-5 h-5 text-indigo-400" />
+            </div>
           </div>
           <div>
-            <h1 className="font-black text-base md:text-lg leading-tight tracking-tight uppercase text-white flex items-center gap-2">
-              SmartName AI
-              <span className="hidden sm:inline-block px-2 py-0.5 bg-yellow-400 text-indigo-950 text-[10px] font-black rounded-full uppercase">
-                無料モデル
+            <div className="flex items-center gap-2">
+              <h1 className="font-extrabold text-base md:text-lg tracking-tight text-white flex items-center gap-1.5">
+                SmartName<span className="text-indigo-400">AI</span>
+              </h1>
+              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Gemini Vision
               </span>
-            </h1>
-            <p className="text-[11px] text-indigo-200 font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-              AI自動写真命名カメラ (Gemini Vision)
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              AI自動写真命名・OCR解析カメラ
             </p>
           </div>
         </div>
 
         {/* Desktop / Tablet Nav */}
-        <nav className="hidden md:flex items-center gap-1.5 bg-indigo-700/60 p-1.5 rounded-xl border border-indigo-500/40">
+        <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
           <button
             id="nav-camera"
             onClick={() => setActiveTab('camera')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               activeTab === 'camera'
-                ? 'bg-white text-indigo-900 shadow-md font-extrabold'
-                : 'text-indigo-100 hover:bg-white/10'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Camera className="w-4 h-4" />
@@ -53,16 +58,18 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-gallery"
             onClick={() => setActiveTab('gallery')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               activeTab === 'gallery'
-                ? 'bg-white text-indigo-900 shadow-md font-extrabold'
-                : 'text-indigo-100 hover:bg-white/10'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <ImageIcon className="w-4 h-4" />
             保存済み
             {savedCount > 0 && (
-              <span className="ml-0.5 px-2 py-0.5 bg-yellow-400 text-indigo-950 text-[10px] font-bold rounded-full">
+              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                activeTab === 'gallery' ? 'bg-indigo-950 text-indigo-200' : 'bg-slate-800 text-indigo-400 border border-indigo-500/30'
+              }`}>
                 {savedCount}
               </span>
             )}
@@ -71,16 +78,18 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-pets"
             onClick={() => setActiveTab('pets')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               activeTab === 'pets'
-                ? 'bg-white text-indigo-900 shadow-md font-extrabold'
-                : 'text-indigo-100 hover:bg-white/10'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Dog className="w-4 h-4" />
-            ペット登録
+            ペット識別
             {petCount > 0 && (
-              <span className="ml-0.5 px-2 py-0.5 bg-pink-400 text-white text-[10px] font-bold rounded-full">
+              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                activeTab === 'pets' ? 'bg-indigo-950 text-pink-300' : 'bg-slate-800 text-pink-400 border border-pink-500/30'
+              }`}>
                 {petCount}
               </span>
             )}
@@ -89,10 +98,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-rules"
             onClick={() => setActiveTab('rules')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               activeTab === 'rules'
-                ? 'bg-white text-indigo-900 shadow-md font-extrabold'
-                : 'text-indigo-100 hover:bg-white/10'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Settings className="w-4 h-4" />
@@ -102,10 +111,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-guide"
             onClick={() => setActiveTab('guide')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
               activeTab === 'guide'
-                ? 'bg-yellow-400 text-indigo-950 shadow-md font-extrabold'
-                : 'text-yellow-300 hover:bg-white/10'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 font-extrabold'
+                : 'text-emerald-400 hover:bg-emerald-500/10'
             }`}
           >
             <HelpCircle className="w-4 h-4" />
@@ -114,12 +123,12 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
       </div>
 
-      {/* Mobile Tab bar at bottom / subheader for smaller screens */}
-      <div className="md:hidden flex border-t border-indigo-700 bg-indigo-700/80 backdrop-blur-md px-2 py-1.5 justify-around text-xs font-bold text-indigo-100">
+      {/* Mobile Nav Bar */}
+      <div className="md:hidden flex border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-2 py-1.5 justify-around text-xs font-semibold text-slate-400">
         <button
           onClick={() => setActiveTab('camera')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${
-            activeTab === 'camera' ? 'bg-white text-indigo-950 font-black' : 'text-indigo-100'
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'camera' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
           }`}
         >
           <Camera className="w-4 h-4" />
@@ -127,20 +136,20 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('gallery')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg relative ${
-            activeTab === 'gallery' ? 'bg-white text-indigo-950 font-black' : 'text-indigo-100'
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl relative transition-all ${
+            activeTab === 'gallery' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
           }`}
         >
           <ImageIcon className="w-4 h-4" />
-          保存画像
+          ギャラリー
           {savedCount > 0 && (
-            <span className="absolute top-0.5 right-1.5 w-2 h-2 rounded-full bg-yellow-400"></span>
+            <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-emerald-400"></span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('pets')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${
-            activeTab === 'pets' ? 'bg-white text-indigo-950 font-black' : 'text-indigo-100'
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'pets' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
           }`}
         >
           <Dog className="w-4 h-4" />
@@ -148,8 +157,8 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('rules')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${
-            activeTab === 'rules' ? 'bg-white text-indigo-950 font-black' : 'text-indigo-100'
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'rules' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
           }`}
         >
           <Settings className="w-4 h-4" />
@@ -157,8 +166,8 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('guide')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${
-            activeTab === 'guide' ? 'bg-yellow-400 text-indigo-950 font-black' : 'text-yellow-300'
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'guide' ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md' : 'text-emerald-400 hover:bg-emerald-500/10'
           }`}
         >
           <HelpCircle className="w-4 h-4" />
@@ -168,3 +177,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

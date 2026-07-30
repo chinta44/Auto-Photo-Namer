@@ -154,7 +154,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Main Camera / Preview Frame */}
-      <div className="relative bg-slate-900 rounded-3xl overflow-hidden border-4 border-indigo-600 shadow-2xl">
+      <div className="relative bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
         {/* Shutter Flash Animation overlay */}
         {flashEffect && (
           <div className="absolute inset-0 bg-white z-30 animate-out fade-out duration-200 pointer-events-none" />
@@ -163,14 +163,14 @@ export const CameraView: React.FC<CameraViewProps> = ({
         {/* Video Viewport - Maximized to screen height */}
         <div className="relative w-full h-[62vh] sm:h-[72vh] min-h-[420px] max-h-[800px] bg-slate-950 flex items-center justify-center overflow-hidden">
           {/* Top Overlay Navigation inside Camera Preview Frame */}
-          <div className="absolute top-2.5 left-2 right-2 z-20 flex items-center justify-center pointer-events-auto">
-            <nav className="flex items-center gap-1 p-1 bg-indigo-950/85 backdrop-blur-md border-2 border-indigo-500/50 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
+          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-center pointer-events-auto">
+            <nav className="flex items-center gap-1 p-1.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab?.('camera')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'camera'
-                    ? 'bg-yellow-400 text-indigo-950 shadow-md scale-105 font-black'
-                    : 'text-white hover:bg-white/15'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -179,16 +179,16 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
               <button
                 onClick={() => setActiveTab?.('gallery')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'gallery'
-                    ? 'bg-yellow-400 text-indigo-950 shadow-md scale-105 font-black'
-                    : 'text-white hover:bg-white/15'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5" />
-                保存画像
+                ギャラリー
                 {savedCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-indigo-900 text-yellow-300 text-[10px] font-black rounded-full">
+                  <span className="px-1.5 py-0.2 bg-slate-900 text-indigo-300 text-[10px] font-extrabold rounded-full border border-indigo-500/30">
                     {savedCount}
                   </span>
                 )}
@@ -196,16 +196,16 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
               <button
                 onClick={() => setActiveTab?.('pets')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'pets'
-                    ? 'bg-yellow-400 text-indigo-950 shadow-md scale-105 font-black'
-                    : 'text-white hover:bg-white/15'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <Dog className="w-3.5 h-3.5" />
                 ペット
                 {petCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-pink-500 text-white text-[10px] font-black rounded-full">
+                  <span className="px-1.5 py-0.2 bg-slate-900 text-pink-300 text-[10px] font-extrabold rounded-full border border-pink-500/30">
                     {petCount}
                   </span>
                 )}
@@ -213,10 +213,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
               <button
                 onClick={() => setActiveTab?.('rules')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'rules'
-                    ? 'bg-yellow-400 text-indigo-950 shadow-md scale-105 font-black'
-                    : 'text-white hover:bg-white/15'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -225,14 +225,14 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
               <button
                 onClick={() => setActiveTab?.('guide')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === 'guide'
-                    ? 'bg-yellow-400 text-indigo-950 shadow-md scale-105 font-black'
-                    : 'text-yellow-300 hover:bg-white/15'
+                    ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-lg shadow-emerald-500/20'
+                    : 'text-emerald-400 hover:bg-emerald-500/10'
                 }`}
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                Q&A
+                ガイド
               </button>
             </nav>
           </div>
@@ -246,24 +246,24 @@ export const CameraView: React.FC<CameraViewProps> = ({
           />
 
           {!hasCameraAccess && (
-            <div className="p-6 text-center text-slate-400 space-y-3 z-10 pt-16">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-950 border border-indigo-800 flex items-center justify-center mx-auto text-yellow-400">
+            <div className="p-6 text-center text-slate-400 space-y-4 z-10 pt-16">
+              <div className="w-16 h-16 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-center mx-auto text-indigo-400 shadow-xl">
                 <Camera className="w-8 h-8" />
               </div>
-              <p className="text-sm font-bold text-slate-200 max-w-md mx-auto">
+              <p className="text-sm font-semibold text-slate-300 max-w-md mx-auto leading-relaxed">
                 {cameraError || "カメラを起動しています..."}
               </p>
-              <div className="flex flex-wrap justify-center gap-2 pt-2">
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
                 <button
                   onClick={startCamera}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-300" />
                   カメラを再起動
                 </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-indigo-950 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-lg transition-colors"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   写真ファイルを選択
@@ -275,13 +275,14 @@ export const CameraView: React.FC<CameraViewProps> = ({
           {/* Target Reticle Overlay for AI Camera feel */}
           {hasCameraAccess && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center pt-8">
-              <div className="w-64 h-64 border-2 border-dashed border-yellow-400/80 rounded-2xl flex items-center justify-center relative">
-                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-yellow-400"></div>
-                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-yellow-400"></div>
-                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-yellow-400"></div>
-                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-yellow-400"></div>
-                <span className="bg-indigo-900/90 text-yellow-400 text-[11px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full border border-yellow-400/50 backdrop-blur-sm">
-                  TARGET DETECTED
+              <div className="w-64 h-64 border border-dashed border-indigo-400/40 rounded-2xl flex items-center justify-center relative">
+                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-indigo-400"></div>
+                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-indigo-400"></div>
+                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-indigo-400"></div>
+                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-indigo-400"></div>
+                <span className="bg-slate-950/80 text-indigo-300 text-[10px] font-mono font-bold tracking-widest uppercase px-3 py-1 rounded-full border border-indigo-500/30 backdrop-blur-md shadow-lg flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  AI TARGET READY
                 </span>
               </div>
             </div>
@@ -289,16 +290,16 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
           {/* Analyzing Spinner Overlay */}
           {isAnalyzing && (
-            <div className="absolute inset-0 bg-indigo-950/90 backdrop-blur-md z-30 flex flex-col items-center justify-center text-white space-y-4">
+            <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl z-30 flex flex-col items-center justify-center text-white space-y-4">
               <div className="relative">
-                <div className="w-16 h-16 rounded-full border-4 border-yellow-400/20 border-t-yellow-400 animate-spin"></div>
-                <Sparkles className="w-6 h-6 text-yellow-400 absolute inset-0 m-auto animate-bounce" />
+                <div className="w-16 h-16 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+                <Sparkles className="w-6 h-6 text-indigo-400 absolute inset-0 m-auto animate-pulse" />
               </div>
               <div className="text-center space-y-1">
-                <p className="font-black text-lg text-yellow-400 uppercase tracking-wide">
+                <p className="font-bold text-base text-white tracking-wide flex items-center justify-center gap-2">
                   Gemini AI 解析中...
                 </p>
-                <p className="text-xs text-indigo-200 font-medium">
+                <p className="text-xs text-slate-400 font-medium">
                   領収書OCR・ペット顔識別・自動判定を実施しています
                 </p>
               </div>
@@ -307,14 +308,14 @@ export const CameraView: React.FC<CameraViewProps> = ({
         </div>
 
         {/* Camera Control Bar */}
-        <div className="p-4 bg-indigo-950 border-t border-indigo-900 flex items-center justify-between">
+        <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isAnalyzing}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-900/80 hover:bg-indigo-800 text-indigo-100 text-xs font-bold transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-40"
             title="アルバムから選択"
           >
-            <Upload className="w-4 h-4 text-yellow-400" />
+            <Upload className="w-4 h-4 text-indigo-400" />
             <span className="hidden sm:inline">ファイル選択</span>
           </button>
 
@@ -331,10 +332,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
             id="shutter-button"
             onClick={handleCapture}
             disabled={isAnalyzing}
-            className="group relative p-1 rounded-full bg-indigo-600 shadow-2xl hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
+            className="group relative p-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
           >
-            <div className="w-16 h-16 rounded-full bg-yellow-400 border-4 border-indigo-600 shadow-lg flex items-center justify-center group-hover:bg-yellow-300 transition-colors">
-              <div className="w-12 h-12 rounded-full border-2 border-indigo-900 group-hover:scale-90 transition-transform"></div>
+            <div className="w-16 h-16 rounded-full bg-slate-950 border-2 border-white/80 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner"></div>
             </div>
           </button>
 
@@ -344,10 +345,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
               setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
             }
             disabled={isAnalyzing || !hasCameraAccess}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-900/80 hover:bg-indigo-800 text-indigo-100 text-xs font-bold transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-40"
             title="カメラ切り替え"
           >
-            <RefreshCw className="w-4 h-4 text-yellow-400" />
+            <RefreshCw className="w-4 h-4 text-indigo-400" />
             <span className="hidden sm:inline">カメラ切替</span>
           </button>
         </div>
