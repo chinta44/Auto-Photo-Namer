@@ -33,6 +33,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Gemini Vision
               </span>
+              <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
+                v1.2.0
+              </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
               写真の命名・文字起こし・自動仕分けはおまかせ
