@@ -1,11 +1,13 @@
 import React from 'react';
-import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles, Zap } from 'lucide-react';
+import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles, Zap, Key } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
   setActiveTab: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
   savedCount: number;
   petCount: number;
+  hasApiKey?: boolean;
+  onOpenApiKeyModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,6 +15,8 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   savedCount,
   petCount,
+  hasApiKey = false,
+  onOpenApiKeyModal,
 }) => {
   return (
     <header id="main-header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 text-white shadow-2xl">
@@ -34,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Gemini Vision
               </span>
               <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.2.0
+                v1.3.0
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
@@ -43,8 +47,29 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Desktop / Tablet Nav */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+        {/* API Key setting button on the right */}
+        <div className="flex items-center gap-2">
+          {onOpenApiKeyModal && (
+            <button
+              onClick={onOpenApiKeyModal}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                hasApiKey
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 animate-pulse'
+              }`}
+            >
+              <Key className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">
+                {hasApiKey ? 'My APIキー設定済み' : '自分のAPIキーを設定'}
+              </span>
+              <span className="sm:hidden">
+                {hasApiKey ? 'Key設定済' : 'Key設定'}
+              </span>
+            </button>
+          )}
+
+          {/* Desktop / Tablet Nav */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
           <button
             id="nav-camera"
             onClick={() => setActiveTab('camera')}
@@ -124,6 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
             無課金ガイド
           </button>
         </nav>
+        </div>
       </div>
 
       {/* Mobile Nav Bar */}

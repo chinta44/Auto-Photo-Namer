@@ -11,9 +11,10 @@ import { PetManagerModal } from './components/PetManagerModal';
 import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
+import { ApiKeyModal } from './components/ApiKeyModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
-import { Sparkles, Camera } from 'lucide-react';
+import { Sparkles, Camera, Key } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
   {
@@ -65,6 +66,16 @@ export default function App() {
     }
   });
 
+  // Custom User Gemini API Key
+  const [userApiKey, setUserApiKey] = useState<string>(() => {
+    try {
+      return localStorage.getItem('custom_gemini_api_key') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
   // Current capture & analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentImageDataUrl, setCurrentImageDataUrl] = useState<string | null>(null);
@@ -90,6 +101,17 @@ export default function App() {
     } catch (e) {}
   }, [namingConfig]);
 
+  const handleSaveApiKey = (key: string) => {
+    setUserApiKey(key);
+    try {
+      if (key) {
+        localStorage.setItem('custom_gemini_api_key', key);
+      } else {
+        localStorage.removeItem('custom_gemini_api_key');
+      }
+    } catch (e) {}
+  };
+
   // Main Photo Analysis Handler
   const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint) => {
     setIsAnalyzing(true);
@@ -99,15 +121,21 @@ export default function App() {
       const converted = await convertToJpegBase64(dataUrl);
       setCurrentImageDataUrl(converted.fullDataUrl);
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (userApiKey) {
+        headers['x-gemini-api-key'] = userApiKey;
+      }
+
       const res = await fetch('/api/analyze-photo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           imageBase64: converted.base64Data,
           mimeType: converted.mimeType,
           petProfiles,
           namingConfig,
           focusPoint,
+          customApiKey: userApiKey,
         }),
       });
 
@@ -149,6 +177,8 @@ export default function App() {
         setActiveTab={setActiveTab}
         savedCount={savedPhotos.length}
         petCount={petProfiles.length}
+        hasApiKey={!!userApiKey}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
       />
 
       {/* Main View Area */}
@@ -161,6 +191,31 @@ export default function App() {
               className="text-red-400 font-bold hover:underline ml-2"
             >
               閉じる
+            </button>
+          </div>
+        )}
+
+        {/* API Key Recommendation Banner if not set */}
+        {!userApiKey && (
+          <div className="p-3.5 sm:p-4 bg-gradient-to-r from-indigo-950/70 via-slate-900 to-slate-950 border border-indigo-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                <Key className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                  自分専用のGemini APIキーを設定して使い放題にしよう！
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Google AI Studioで無料・1分で取得可能。混雑時も制限なしで高速解析できます。
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsApiKeyModalOpen(true)}
+              className="w-full sm:w-auto px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 transition shrink-0 whitespace-nowrap"
+            >
+              無料キーを設定する
             </button>
           </div>
         )}
@@ -219,11 +274,19 @@ export default function App() {
         />
       )}
 
+      {/* API Key Settings Modal */}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        apiKey={userApiKey}
+        onSaveApiKey={handleSaveApiKey}
+      />
+
       {/* Modern Footer */}
       <footer className="py-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          SmartName AI — Gemini Vision API (完全無料モデル対応 PWA)
+          いちいち面倒なカメラアプリ v1.3.0 — Gemini Vision (個人APIキー・ターゲット認識対応)
         </p>
       </footer>
     </div>

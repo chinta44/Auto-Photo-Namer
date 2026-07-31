@@ -11,9 +11,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: "25mb" }));
 
-// Initialize Gemini client lazily/safely
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+// Initialize Gemini client lazily/safely with optional custom API key
+const getGeminiClient = (customKey?: string) => {
+  const apiKey = (customKey && customKey.trim()) ? customKey.trim() : process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return null;
   }
@@ -33,13 +33,15 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/analyze-photo", async (req, res) => {
   try {
-    const { imageBase64, mimeType = "image/jpeg", petProfiles = [], namingConfig, focusPoint } = req.body;
+    const { imageBase64, mimeType = "image/jpeg", petProfiles = [], namingConfig, focusPoint, customApiKey } = req.body;
+    const headerKey = req.headers['x-gemini-api-key'] as string | undefined;
+    const userApiKey = customApiKey || headerKey;
 
     if (!imageBase64) {
       return res.status(400).json({ error: "Missing imageBase64" });
     }
 
-    const ai = getGeminiClient();
+    const ai = getGeminiClient(userApiKey);
     if (!ai) {
       // Fallback mock if key is missing or invalid in demo mode
       const focusedName = focusPoint ? "タップ指定位置の対象物" : "サンプルアイテム";
