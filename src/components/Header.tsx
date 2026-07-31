@@ -1,5 +1,5 @@
 import React from 'react';
-import { Key } from 'lucide-react';
+import { Key, Cloud, Check } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
@@ -8,6 +8,9 @@ interface HeaderProps {
   petCount: number;
   hasApiKey?: boolean;
   onOpenApiKeyModal?: () => void;
+  onOpenDriveModal?: () => void;
+  isDriveConnected?: boolean;
+  lastBackupTime?: string | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +20,9 @@ export const Header: React.FC<HeaderProps> = ({
   petCount,
   hasApiKey = false,
   onOpenApiKeyModal,
+  onOpenDriveModal,
+  isDriveConnected = false,
+  lastBackupTime,
 }) => {
   return (
     <header id="main-header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 text-white shadow-2xl">
@@ -26,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative group cursor-pointer" onClick={() => setActiveTab('camera')}>
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
             <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
-              <img src="/apple-touch-icon.png?v=1.5.0" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="/apple-touch-icon.png?v=1.6.1" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </div>
           <div>
@@ -39,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Gemini Vision
               </span>
               <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.6.0
+                v1.6.1
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
@@ -48,12 +54,33 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* API Key setting button on the right */}
+        {/* Header Right Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Google Drive Backup Button */}
+          {onOpenDriveModal && (
+            <button
+              onClick={onOpenDriveModal}
+              title={isDriveConnected ? `Google Drive連携中${lastBackupTime ? ` (最終保存: ${lastBackupTime})` : ''}` : 'Google Drive自動バックアップ設定'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                isDriveConnected
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'bg-slate-900 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <Cloud className={`w-3.5 h-3.5 ${isDriveConnected ? 'text-emerald-400' : 'text-indigo-400'}`} />
+              <span className="hidden md:inline">
+                {isDriveConnected ? 'Drive連携中' : 'Driveバックアップ'}
+              </span>
+              <span className="md:hidden">Drive</span>
+              {isDriveConnected && <Check className="w-3 h-3 text-emerald-400" />}
+            </button>
+          )}
+
+          {/* API Key setting button */}
           {onOpenApiKeyModal && (
             <button
               onClick={onOpenApiKeyModal}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
                 hasApiKey
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
                   : 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 animate-pulse'
@@ -64,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {hasApiKey ? 'My APIキー設定済み' : '自分のAPIキーを設定'}
               </span>
               <span className="sm:hidden">
-                {hasApiKey ? 'Key設定済' : 'Key設定'}
+                {hasApiKey ? 'Key' : 'Key'}
               </span>
             </button>
           )}

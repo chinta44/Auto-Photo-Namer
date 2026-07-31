@@ -12,8 +12,10 @@ import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
 import { ApiKeyModal } from './components/ApiKeyModal';
+import { DriveBackupModal } from './components/DriveBackupModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
+import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { Sparkles, Camera, Key } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
@@ -75,6 +77,88 @@ export default function App() {
     }
   });
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  // Google Drive Backup state
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
+  const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('auto_photo_drive_autobackup') === 'true';
+    } catch (e) {
+      return true;
+    }
+  });
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('auto_photo_last_backup_time');
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Check Drive Auth status
+  useEffect(() => {
+    const unsubscribe = initDriveAuth(
+      () => setIsDriveConnected(true),
+      () => setIsDriveConnected(false)
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Save auto backup toggle to LocalStorage
+  const handleToggleAutoBackup = (enabled: boolean) => {
+    setIsAutoBackupEnabled(enabled);
+    try {
+      localStorage.setItem('auto_photo_drive_autobackup', String(enabled));
+    } catch (e) {}
+  };
+
+  const handleUpdateLastBackupTime = (time: string) => {
+    setLastBackupTime(time);
+    try {
+      localStorage.setItem('auto_photo_last_backup_time', time);
+    } catch (e) {}
+  };
+
+  // Auto-backup to Google Drive if connected and enabled
+  useEffect(() => {
+    if (!isAutoBackupEnabled || !isDriveConnected) return;
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const payload: BackupDataPayload = {
+          version: '1.6.1',
+          timestamp: new Date().toISOString(),
+          petProfiles,
+          savedPhotos,
+          namingConfig,
+        };
+        await uploadBackupToDrive(token, payload);
+        const formatted = new Date().toLocaleString('ja-JP');
+        handleUpdateLastBackupTime(formatted);
+      } catch (e) {
+        console.warn('Auto-backup background sync notice:', e);
+      }
+    }, 3000); // Debounce 3s
+
+    return () => clearTimeout(timer);
+  }, [petProfiles, savedPhotos, namingConfig, isAutoBackupEnabled, isDriveConnected]);
+
+  // Restore data callback from Google Drive
+  const handleRestoreData = (payload: BackupDataPayload) => {
+    if (payload.petProfiles && Array.isArray(payload.petProfiles)) {
+      setPetProfiles(payload.petProfiles);
+    }
+    if (payload.savedPhotos && Array.isArray(payload.savedPhotos)) {
+      setSavedPhotos(payload.savedPhotos);
+    }
+    if (payload.namingConfig) {
+      setNamingConfig(payload.namingConfig);
+    }
+  };
 
   // Current capture & analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -189,6 +273,9 @@ export default function App() {
         petCount={petProfiles.length}
         hasApiKey={!!userApiKey}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+        onOpenDriveModal={() => setIsDriveModalOpen(true)}
+        isDriveConnected={isDriveConnected}
+        lastBackupTime={lastBackupTime}
       />
 
       {/* Main View Area */}
@@ -292,11 +379,25 @@ export default function App() {
         onSaveApiKey={handleSaveApiKey}
       />
 
+      {/* Google Drive Backup Modal */}
+      <DriveBackupModal
+        isOpen={isDriveModalOpen}
+        onClose={() => setIsDriveModalOpen(false)}
+        petProfiles={petProfiles}
+        savedPhotos={savedPhotos}
+        namingConfig={namingConfig}
+        onRestoreData={handleRestoreData}
+        isAutoBackupEnabled={isAutoBackupEnabled}
+        onToggleAutoBackup={handleToggleAutoBackup}
+        lastBackupTime={lastBackupTime}
+        onBackupSuccess={handleUpdateLastBackupTime}
+      />
+
       {/* Modern Footer */}
       <footer className="py-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.0 — Gemini Vision (純正ICOファビコン・ビルド自動生成統合)
+          いちいち面倒なカメラアプリ v1.6.1 — Gemini Vision (Google Drive自動バックアップ・純正ICOファビコン統合)
         </p>
       </footer>
     </div>
