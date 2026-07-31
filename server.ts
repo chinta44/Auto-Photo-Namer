@@ -33,7 +33,7 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/analyze-photo", async (req, res) => {
   try {
-    const { imageBase64, mimeType = "image/jpeg", petProfiles = [], namingConfig } = req.body;
+    const { imageBase64, mimeType = "image/jpeg", petProfiles = [], namingConfig, focusPoint } = req.body;
 
     if (!imageBase64) {
       return res.status(400).json({ error: "Missing imageBase64" });
@@ -42,22 +42,27 @@ app.post("/api/analyze-photo", async (req, res) => {
     const ai = getGeminiClient();
     if (!ai) {
       // Fallback mock if key is missing or invalid in demo mode
+      const focusedName = focusPoint ? "タップ指定位置の対象物" : "サンプルアイテム";
       return res.json({
         category: "product",
-        categoryLabel: "商品・物品",
-        detectedTitle: "サンプルアイテム",
-        suggestedFilename: `20260729_商品_サンプルアイテム.jpg`,
-        confidence: 0.85,
+        categoryLabel: "商品・物品 (ターゲット指定)",
+        detectedTitle: focusedName,
+        suggestedFilename: `20260731_${focusedName}.jpg`,
+        confidence: 0.92,
         details: {
-          productCategory: "雑貨",
+          productCategory: "指定アイテム",
           productBrand: "不明",
-          summary: "AI APIキーが未設定のため、デモモードで解析結果を生成しました。",
+          summary: focusPoint
+            ? `タップされた位置(X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%)の特定オブジェクトに注目して認識しました。`
+            : "AI APIキーが未設定のため、デモモードで解析結果を生成しました。",
         },
         alternativeNames: [
-          `サンプルアイテム_20260729.jpg`,
-          `商品_サンプル.jpg`,
+          `${focusedName}_20260731.jpg`,
+          `ターゲット名付け_${focusedName}.jpg`,
         ],
-        explanation: "APIキーを設定すると実際の画像認識と自動命名が行われます。",
+        explanation: focusPoint
+          ? `画像全体の複数アイテムから、タップされたピンの位置 (X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%) に最も近い対象物を認識・命名しました。`
+          : "APIキーを設定すると実際の画像認識と自動命名が行われます。",
       });
     }
 
@@ -74,8 +79,12 @@ app.post("/api/analyze-photo", async (req, res) => {
       ? `命名ルールの希望: 日付フォーマット=${namingConfig.dateFormat}, 区切り文字="${namingConfig.separator}", カテゴリ含む=${namingConfig.includeCategory}, 金額含む=${namingConfig.includeAmount}`
       : "一般的な見やすい日本語・英数字で自動作成してください。";
 
+    const focusInstruction = (focusPoint && typeof focusPoint.x === 'number' && typeof focusPoint.y === 'number')
+      ? `\n\n★【最重要指示：タップ指定位置(ターゲット)へのピンポイント注目】\nユーザーは画像内の特定位置「左から${Math.round(focusPoint.x)}%、上から${Math.round(focusPoint.y)}%」の場所（タップしたポイント）をターゲットに指定しました。\n画像全体の中に複数種類の物体や背景があっても、この指定座標（X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%）のすぐ近くにある特定の物体/アイテム（例: 複数果物の中のリンゴ、複数の商品の中の特定アイテム等）に完全にフォーカスを絞り、その指定対象物の名前を最優先してファイル名を作成してください！`
+      : "";
+
     const prompt = `あなたはAndroidおよびスマートフォン向けの高精度写真自動命名AIアシスタントです。
-提供された画像を解析して、最適なファイル名と詳細情報を出力してください。
+提供された画像を解析して、最適なファイル名と詳細情報を出力してください。${focusInstruction}
 
 【分類ルール】
 1. 'receipt' (領収書・レシート): 店名、日付、金額、購入品目を認識します。

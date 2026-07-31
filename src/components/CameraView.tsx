@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, Upload, RefreshCw, Sparkles, Image as ImageIcon, Dog, Settings, HelpCircle, Zap, AlertCircle } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Sparkles, Image as ImageIcon, Dog, Settings, HelpCircle, Zap, AlertCircle, Target, MapPin } from 'lucide-react';
+import { FocusPoint } from '../types';
 
 interface CameraViewProps {
-  onCaptureImage: (dataUrl: string) => void;
+  onCaptureImage: (dataUrl: string, focusPoint?: FocusPoint) => void;
   isAnalyzing: boolean;
   activeTab?: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
   setActiveTab?: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
@@ -115,6 +116,15 @@ export const CameraView: React.FC<CameraViewProps> = ({
     };
   }, [facingMode]);
 
+  const [selectedFocusPoint, setSelectedFocusPoint] = useState<FocusPoint | null>(null);
+
+  const handleVideoClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setSelectedFocusPoint({ x: Math.round(x), y: Math.round(y) });
+  };
+
   const handleCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -131,7 +141,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      onCaptureImage(dataUrl);
+      onCaptureImage(dataUrl, selectedFocusPoint || undefined);
     }
   };
 
@@ -161,7 +171,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
         )}
 
         {/* Video Viewport - Maximized to screen height */}
-        <div className="relative w-full h-[62vh] sm:h-[72vh] min-h-[420px] max-h-[800px] bg-slate-950 flex items-center justify-center overflow-hidden">
+        <div
+          onClick={hasCameraAccess ? handleVideoClick : undefined}
+          className={`relative w-full h-[62vh] sm:h-[72vh] min-h-[420px] max-h-[800px] bg-slate-950 flex items-center justify-center overflow-hidden ${hasCameraAccess ? 'cursor-crosshair' : ''}`}
+        >
           {/* Top Overlay Navigation inside Camera Preview Frame */}
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-center pointer-events-auto">
             <nav className="flex items-center gap-1 p-1.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
@@ -269,6 +282,22 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   写真ファイルを選択
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* User Tap-to-Focus Point Indicator Overlay */}
+          {selectedFocusPoint && (
+            <div
+              className="absolute z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+              style={{ left: `${selectedFocusPoint.x}%`, top: `${selectedFocusPoint.y}%` }}
+            >
+              <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-500/20 flex items-center justify-center animate-pulse shadow-2xl">
+                <Target className="w-6 h-6 text-emerald-400" />
+              </div>
+              <span className="bg-slate-900/90 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap mt-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-emerald-400" />
+                指定オブジェクト命名
+              </span>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AnalysisResult, PetProfile, SavedPhoto } from '../types';
-import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag } from 'lucide-react';
+import { AnalysisResult, PetProfile, SavedPhoto, FocusPoint } from '../types';
+import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw } from 'lucide-react';
 
 interface AnalysisModalProps {
   imageDataUrl: string;
@@ -9,6 +9,8 @@ interface AnalysisModalProps {
   onSaveToGallery: (photo: SavedPhoto) => void;
   onRegisterPet: (newPet: PetProfile) => void;
   onClose: () => void;
+  onReAnalyzeWithFocus?: (dataUrl: string, focusPoint: FocusPoint) => void;
+  isAnalyzing?: boolean;
 }
 
 export const AnalysisModal: React.FC<AnalysisModalProps> = ({
@@ -18,12 +20,22 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
   onSaveToGallery,
   onRegisterPet,
   onClose,
+  onReAnalyzeWithFocus,
+  isAnalyzing,
 }) => {
   const [selectedFilename, setSelectedFilename] = useState(analysis.suggestedFilename);
   const [customTagsText, setCustomTagsText] = useState('');
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [focusPin, setFocusPin] = useState<FocusPoint | null>(null);
+
+  const handlePreviewImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setFocusPin({ x: Math.round(x), y: Math.round(y) });
+  };
 
   // New Pet Registration inline state
   const [newPetName, setNewPetName] = useState('');
@@ -135,8 +147,41 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
         <div className="p-4 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {/* Top Preview & Category Info */}
           <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-            <div className="w-32 h-32 rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0 shadow-lg">
-              <img src={imageDataUrl} alt="Preview" className="w-full h-full object-cover" />
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <div
+                onClick={handlePreviewImageClick}
+                className="relative w-36 h-36 rounded-2xl overflow-hidden bg-slate-900 border-2 border-indigo-500/40 hover:border-indigo-400 cursor-crosshair shadow-xl group"
+              >
+                <img src={imageDataUrl} alt="Preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-transparent transition-colors flex items-end p-1.5 pointer-events-none">
+                  <span className="text-[9px] font-bold bg-slate-950/80 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30 backdrop-blur-xs flex items-center gap-1">
+                    <Target className="w-2.5 h-2.5" />
+                    画像内の対象をタップ
+                  </span>
+                </div>
+
+                {focusPin && (
+                  <div
+                    className="absolute z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+                    style={{ left: `${focusPin.x}%`, top: `${focusPin.y}%` }}
+                  >
+                    <div className="w-7 h-7 rounded-full border-2 border-emerald-400 bg-emerald-500/30 flex items-center justify-center animate-pulse shadow-lg">
+                      <Target className="w-4 h-4 text-emerald-300" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {focusPin && onReAnalyzeWithFocus && (
+                <button
+                  onClick={() => onReAnalyzeWithFocus(imageDataUrl, focusPin)}
+                  disabled={isAnalyzing}
+                  className="w-full px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-[11px] rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                  📍 タップ位置でAI指定命名
+                </button>
+              )}
             </div>
 
             <div className="flex-1 space-y-2 text-left w-full">

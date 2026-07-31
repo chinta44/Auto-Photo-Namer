@@ -11,7 +11,7 @@ import { PetManagerModal } from './components/PetManagerModal';
 import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
-import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig } from './types';
+import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
 import { Sparkles, Camera } from 'lucide-react';
 
@@ -91,7 +91,7 @@ export default function App() {
   }, [namingConfig]);
 
   // Main Photo Analysis Handler
-  const handleCaptureImage = async (dataUrl: string) => {
+  const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
 
@@ -107,6 +107,7 @@ export default function App() {
           mimeType: converted.mimeType,
           petProfiles,
           namingConfig,
+          focusPoint,
         }),
       });
 
@@ -209,6 +210,8 @@ export default function App() {
           petProfiles={petProfiles}
           onSaveToGallery={handleSaveToGallery}
           onRegisterPet={handleAddPet}
+          onReAnalyzeWithFocus={handleCaptureImage}
+          isAnalyzing={isAnalyzing}
           onClose={() => {
             setCurrentAnalysis(null);
             setCurrentImageDataUrl(null);
