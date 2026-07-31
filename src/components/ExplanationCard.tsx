@@ -200,12 +200,12 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-              v1.3.0
+              v1.4.0
             </span>
             <span>いちいち面倒なカメラアプリ (Build 2026.07.31)</span>
           </div>
           <div className="text-slate-400 text-[10px]">
-            最新アップデート: 自分専用の無料Gemini APIキー登録機能＆タップ指定命名に対応
+            最新アップデート: スマホショートカット・PWAアイコン対応＆ヘッダー表示の最適化
           </div>
         </div>
       </div>
