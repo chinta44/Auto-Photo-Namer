@@ -38,23 +38,23 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header Info */}
-      <div className="bg-[#242424] border border-[#3A3A3A] rounded-2xl p-5 space-y-3">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-xl text-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#1A1A1A] border border-[#3A3A3A] text-[#7FDBCA] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center font-bold shadow-sm">
             <Dog className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-semibold text-base text-[#F2F0EC] tracking-tight">ペット登録・AI顔識別モデル</h2>
-            <p className="text-xs text-[#9A9890] leading-relaxed">
+            <h2 className="font-bold text-base text-white tracking-tight">ペット登録・AI顔識別モデル</h2>
+            <p className="text-xs text-slate-400 font-medium">
               一度ペットの名前と特徴を登録すると、Gemini Vision AIが写真から個体を識別して「ポチ_日付.jpg」のように自動命名してくれます。
             </p>
           </div>
         </div>
 
-        <div className="p-3 bg-[#7FDBCA]/[0.06] border border-[#7FDBCA]/25 rounded-lg text-xs text-[#C9C7C1] flex items-start gap-2">
-          <Info className="w-4 h-4 text-[#7FDBCA] shrink-0 mt-0.5" />
+        <div className="p-3 bg-pink-500/10 border border-pink-500/20 rounded-2xl text-xs text-pink-300 font-medium flex items-start gap-2">
+          <Info className="w-4 h-4 text-pink-400 shrink-0 mt-0.5" />
           <span>
             初回撮影時に写真から「このペットに名前をつける」を押すだけでも自動的にここに登録されます！
           </span>
@@ -62,31 +62,31 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
       </div>
 
       {/* Add New Pet Form */}
-      <form onSubmit={handleSubmit} className="bg-[#242424] border border-[#3A3A3A] rounded-2xl p-5 space-y-4">
-        <h3 className="font-semibold text-sm text-[#F2F0EC] tracking-tight flex items-center gap-2">
-          <Plus className="w-4 h-4 text-[#7FDBCA]" />
+      <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl text-slate-100">
+        <h3 className="font-bold text-sm text-white tracking-tight flex items-center gap-2">
+          <Plus className="w-4 h-4 text-pink-400" />
           新しいペットを追加登録
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-[#9A9890]">ペットの名前 (必須):</label>
+            <label className="text-xs font-semibold text-slate-300">ペットの名前 (必須):</label>
             <input
               type="text"
               placeholder="例: ポチ, タマ, モコ"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#1A1A1A] border border-[#3A3A3A] rounded-lg px-3 py-2 text-xs text-[#F2F0EC] focus:outline-none focus:border-[#7FDBCA]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-100 focus:outline-none focus:border-pink-500"
               required
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-[#9A9890]">ペットの種類:</label>
+            <label className="text-xs font-semibold text-slate-300">ペットの種類:</label>
             <select
               value={species}
               onChange={(e) => setSpecies(e.target.value as any)}
-              className="w-full bg-[#1A1A1A] border border-[#3A3A3A] rounded-lg px-3 py-2 text-xs text-[#F2F0EC] focus:outline-none focus:border-[#7FDBCA]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-100 focus:outline-none focus:border-pink-500"
             >
               <option value="dog">犬 (Dog)</option>
               <option value="cat">猫 (Cat)</option>
@@ -96,20 +96,20 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
           </div>
 
           <div className="sm:col-span-2 space-y-1">
-            <label className="text-xs font-medium text-[#9A9890]">犬種/毛色/見た目の特徴:</label>
+            <label className="text-xs font-semibold text-slate-300">犬種/毛色/見た目の特徴:</label>
             <input
               type="text"
               placeholder="例: 茶色の柴犬、鼻の横に黒いブチがある白猫、オカメインコ"
               value={breedOrDescription}
               onChange={(e) => setBreedOrDescription(e.target.value)}
-              className="w-full bg-[#1A1A1A] border border-[#3A3A3A] rounded-lg px-3 py-2 text-xs text-[#F2F0EC] focus:outline-none focus:border-[#7FDBCA]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-100 focus:outline-none focus:border-pink-500"
             />
           </div>
         </div>
 
         <button
           type="submit"
-          className="w-full py-2.5 bg-[#7FDBCA] hover:brightness-110 text-[#0F1E1C] font-semibold rounded-lg text-xs flex items-center justify-center gap-2 transition-all"
+          className="w-full py-2.5 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-pink-600/20 transition-all"
         >
           <Plus className="w-4 h-4" />
           ペットを登録する
@@ -118,12 +118,12 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
 
       {/* Registered Pets List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-sm text-[#F2F0EC] tracking-tight flex items-center justify-between">
+        <h3 className="font-bold text-sm text-slate-200 tracking-tight flex items-center justify-between">
           <span>登録済みペット ({petProfiles.length}匹)</span>
         </h3>
 
         {petProfiles.length === 0 ? (
-          <div className="text-center py-8 bg-[#242424] rounded-2xl border border-[#3A3A3A] text-[#9A9890] text-xs">
+          <div className="text-center py-10 bg-slate-900/60 rounded-3xl border border-slate-800 text-slate-400 text-xs font-medium shadow-xl">
             まだ登録されたペットはありません。「ペット写真」を撮影して命名すると自動追加されます。
           </div>
         ) : (
@@ -131,10 +131,10 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
             {petProfiles.map((pet) => (
               <div
                 key={pet.id}
-                className="bg-[#242424] border border-[#3A3A3A] rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-[#7FDBCA]/40 transition-all"
+                className="bg-slate-900 border border-slate-800 rounded-3xl p-4 flex items-center justify-between gap-3 shadow-xl hover:border-slate-700 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#1A1A1A] border border-[#3A3A3A] overflow-hidden flex items-center justify-center text-[#7FDBCA] shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/20 overflow-hidden flex items-center justify-center text-pink-400 shrink-0">
                     {pet.avatarUrl ? (
                       <img src={pet.avatarUrl} alt={pet.name} className="w-full h-full object-cover" />
                     ) : (
@@ -142,18 +142,18 @@ export const PetManagerModal: React.FC<PetManagerProps> = ({
                     )}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-[#F2F0EC] flex items-center gap-1.5">
+                    <h4 className="font-bold text-sm text-white flex items-center gap-1.5">
                       {pet.name}
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#7FDBCA]" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     </h4>
-                    <p className="text-xs text-[#C9C7C1]">{pet.breedOrDescription}</p>
-                    <p className="text-[10px] text-[#9A9890] font-mono">登録日: {pet.registeredAt}</p>
+                    <p className="text-xs text-slate-300">{pet.breedOrDescription}</p>
+                    <p className="text-[10px] text-slate-500">登録日: {pet.registeredAt}</p>
                   </div>
                 </div>
 
                 <button
                   onClick={() => onDeletePet(pet.id)}
-                  className="p-2 text-[#9A9890] hover:text-[#F0B8B8] hover:bg-[#1A1A1A] rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors"
                   title="削除"
                 >
                   <Trash2 className="w-4 h-4" />

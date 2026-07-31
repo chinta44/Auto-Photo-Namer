@@ -1,60 +1,152 @@
-# SmartName AI (smart-name-ai)
+# 📸 SmartName AI - AI写真自動命名＆整理カメラ
 
-写真を撮ると Gemini Vision AI が内容（領収書 / ペット / 商品 / 書類）を判別し、
-わかりやすいファイル名を自動生成して整理してくれるカメラアプリです。
+**Gemini Vision AI（Gemini 3.6 Flash）** を活用して、スマートフォンやPCで撮影・アップロードした写真を自動解析し、意味のあるファイル名を生成して保存できるWeb/PWAアプリケーションです。
 
-このバージョンは **サーバー(Express)を使わず、ブラウザから直接 Gemini API を呼び出す**
-構成になっています。GitHub Pages のような静的ホスティングだけで完結します。
+領収書のOCR読み取り、ペットの個体識別・命名、商品・アイテムのカテゴリ判別を全自動で行うため、写真整理の手間をゼロにします。
 
-## ローカルで動かす
+---
 
+## ✨ 主な機能
+
+### 🧾 1. 領収書・レシートの自動OCR命名
+- 撮影された領収書から「店舗名」「撮影日付」「合計金額」をAIが自動抽出。
+- 例: `20260729_セブンイレブン_1280円.jpg`
+- 確定申告や家計簿管理の整理が圧倒的にラクになります。
+
+### 🐶 2. ペットの個体識別・名前学習
+- 初回撮影時に「名前（ポチ、タマなど）」と毛色・特徴を登録。
+- 次回からの撮影ではAIが個体を自動認識して命名。
+- 例: `ポチ_20260729.jpg`
+
+### 👟 3. 商品・物品の自動カテゴリ判定
+- 撮影されたオブジェクトやブランドを即座に判定。
+- 特定が難しい場合も「靴」「バッグ」「ジュース」など汎用カテゴリ名で安全に保存。
+- 例: `ナイキ_スニーカー.jpg`
+
+### ⚙️ 4. 柔軟な命名ルールカスタマイズ
+- **日付フォーマット**: `8桁数字 (20260729)` / `ハイフン (2026-07-29)` / `なし`
+- **単語区切り文字**: `_ (アンダースコア)` / `- (ハイフン)` / `スペース`
+- **オプション**: カテゴリ名や金額をファイル名に自動含めるかのオン/オフ切り替え
+
+### 💰 5. 完全無料枠での運用設計
+- Google Gemini API の無料枠（1日1,500リクエスト）を活用するため、個人使用であれば**完全無料・サーバー代ゼロ**で永久利用可能です。
+
+---
+
+## 🛠️ 技術スタック
+
+- **フロントエンド**: React 18, Vite, TypeScript, Tailwind CSS
+- **アイコン**: Lucide React
+- **バックエンド/プロキシ**: Node.js / Express
+- **AIエンジン**: Google Gen AI SDK (`@google/genai`) - Gemini 3.6 Flash Vision
+
+---
+
+## 🚀 ローカル開発環境のセットアップ
+
+### 前提条件
+- Node.js v18 以上
+- npm
+
+### 1. リポジトリのクローン
+```bash
+git clone https://github.com/YOUR_USERNAME/smartname-ai.git
+cd smartname-ai
+```
+
+### 2. 依存パッケージのインストール
 ```bash
 npm install
+```
+
+### 3. 環境変数の設定
+`.env.example` をコピーして `.env` ファイルを作成し、Gemini APIキーを設定します。
+
+```bash
+cp .env.example .env
+```
+
+`.env` 内の `GEMINI_API_KEY` に、[Google AI Studio](https://aistudio.google.com/) で取得した無料のAPIキーを入力します：
+
+```env
+GEMINI_API_KEY="AIzaSy..."
+```
+
+### 4. 開発サーバーの起動
+```bash
 npm run dev
 ```
 
-## GitHub Pagesへのデプロイ手順
+ブラウザで `http://localhost:3000` にアクセスしてアプリケーションを確認できます。
 
-1. このフォルダの中身をリポジトリ `smart-name-ai` としてGitHubにpushする
-2. GitHubのリポジトリ → **Settings → Pages** → Source を **GitHub Actions** に設定する
-3. `main` ブランチにpushすると `.github/workflows/deploy.yml` が自動でビルド＆デプロイする
-4. `https://<あなたのユーザー名>.github.io/smart-name-ai/` で公開される
+---
 
-> **重要**: `vite.config.ts` の `base: '/smart-name-ai/'` はリポジトリ名と必ず一致させてください。
-> ここがズレると資産(JS/CSS)が404になり、画面が真っ白のまま起動しません。
-> リポジトリ名を変える場合は、この `base` の値も同じ名前に変更してください。
+## 📦 ビルドとプロダクション実行
 
-## Gemini APIキーの設定
+```bash
+# プロダクションビルド（Vite + Server Bundling）
+npm run build
 
-このアプリにはサーバーがないため、**自分のGemini APIキーをブラウザに保存**して使います。
-
-1. アプリを開くと初回に「Gemini APIキー設定」モーダルが表示されます
-2. [Google AI Studio](https://aistudio.google.com/app/apikey) で無料のAPIキーを発行
-3. 発行したキーを貼り付けて保存（`localStorage` にのみ保存され、外部サーバーには送信されません）
-
-無料枠は個人利用なら通常十分な範囲（1分あたり15リクエスト程度、1日あたり1,500リクエスト程度）でカバーできます。
-
-### 注意点(セキュリティ)
-
-APIキーはブラウザの `localStorage` に保存され、Gemini APIへのリクエストもブラウザから直接送信されます。
-このURLを他人と共有すると、共有された相手が自分のブラウザに自分のキーを入れて使う形になるため、
-**あなた自身のキーが他人に見られることはありません**が、逆にキーを他人と共有しないよう注意してください。
-
-## 構成
-
+# 本番サーバー起動
+npm run start
 ```
-src/
-  App.tsx                 画面全体の状態管理・タブ切り替え
-  lib/geminiClient.ts      ブラウザから直接Gemini APIを呼ぶ処理(新規)
-  components/
-    ApiKeyModal.tsx        APIキー設定モーダル(新規)
-    Header.tsx             ナビゲーション + APIキーボタン
-    CameraView.tsx         カメラ撮影・シャッター音・ファイルアップロード
-    AnalysisModal.tsx       AI解析結果・ファイル名編集・保存
-    PetManagerModal.tsx     ペットプロフィール管理
-    PhotoGallery.tsx        保存済み写真ギャラリー・検索・CSV出力
-    NamingRulesModal.tsx    命名ルールのカスタマイズ
-    ExplanationCard.tsx     使い方・仕組みの説明ページ
-  data/samplePhotos.ts     ワンクリック体験用サンプル(プレースホルダー)
-  types.ts                 型定義
+
+---
+
+## 🌐 Render (render.com) へのデプロイ手順
+
+無料クラウドプラットフォーム **Render** を使うと、GitHubにアップロードしたリポジトリから数クリックでアプリを無料公開できます。
+
+### 1. Renderにサインイン
+[Render (render.com)](https://render.com/) にアクセスし、GitHubアカウントでログインします。
+
+### 2. 新しい Web Service を作成
+1. ダッシュボードで **「New +」** ボタンをクリックし、**「Web Service」** を選択します。
+2. GitHubリポジトリ一覧から `smartname-ai` （本リポジトリ）を選択して **Connect** をクリックします。
+
+### 3. 設定項目の入力
+以下の内容を設定します：
+
+- **Name**: `smartname-ai` (任意のお好きな名前)
+- **Language**: `Node`
+- **Branch**: `main` (または `master`)
+- **Region**: 最寄りの地域（例: `Singapore` など）
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm run start`
+- **Instance Type**: `Free` (無料プラン)
+
+### 4. 環境変数 (Environment Variables) の設定
+画面下の **Environment Variables** セクションで以下を追加します：
+
+| Key | Value | 説明 |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | `AIzaSy...` | Google AI Studioで取得したAPIキー |
+| `NODE_ENV` | `production` | 本番環境モード指定 |
+
+### 5. デプロイ実行
+1. **「Create Web Service」** をクリックします。
+2. 自動的にビルドとデプロイが開始され、数分後に `https://smartname-ai.onrender.com` のような公開URLが生成されます！
+
+---
+
+## 📂 プロジェクト構造
+
+```text
+├── src/
+│   ├── components/       # UIコンポーネント（カメラ、モーダル、ギャラリー等）
+│   ├── data/             # サンプルデータ・テンプレート設定
+│   ├── services/         # Gemini Vision API 呼び出しロジック
+│   ├── types.ts          # TypeScript型定義
+│   ├── App.tsx           # メインアプリケーションコンポーネント
+│   └── main.tsx          # エントリーポイント
+├── server.ts             # Express APIプロキシサーバー（APIキー保護）
+├── metadata.json         # アプリケーションメタデータ
+├── .env.example          # 環境変数サンプル
+└── package.json
 ```
+
+---
+
+## 📄 ライセンス
+
+MIT License

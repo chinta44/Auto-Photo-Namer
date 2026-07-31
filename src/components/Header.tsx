@@ -1,14 +1,13 @@
 import React from 'react';
-import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles, KeyRound } from 'lucide-react';
-import { APP_VERSION } from '../version';
+import { Camera, Image as ImageIcon, Dog, Settings, HelpCircle, Sparkles, Zap, Key } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
   setActiveTab: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
   savedCount: number;
   petCount: number;
-  hasApiKey: boolean;
-  onOpenApiKey: () => void;
+  hasApiKey?: boolean;
+  onOpenApiKeyModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,158 +15,195 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   savedCount,
   petCount,
-  hasApiKey,
-  onOpenApiKey,
+  hasApiKey = false,
+  onOpenApiKeyModal,
 }) => {
   return (
-    <header id="main-header" className="sticky top-0 z-40 bg-[#1A1A1A] border-b border-[#3A3A3A] text-[#F2F0EC]">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header id="main-header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 text-white shadow-2xl">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg border border-[#3A3A3A] bg-[#242424] flex items-center justify-center">
-            <Sparkles className="w-4.5 h-4.5 text-[#7FDBCA]" />
+          <div className="relative group cursor-pointer" onClick={() => setActiveTab('camera')}>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+            <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
+              <img src="/favicon.jpg" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </div>
           </div>
           <div>
-            <h1 className="font-semibold text-sm md:text-base leading-tight tracking-tight text-[#F2F0EC] flex items-center gap-2">
-              SmartName AI
-              <span className="text-[9px] font-mono font-normal text-[#9A9890] border border-[#3A3A3A] rounded px-1 py-0.5">
-                v{APP_VERSION}
+            <div className="flex items-center gap-2">
+              <h1 className="font-extrabold text-base md:text-lg tracking-tight text-white flex items-center gap-1.5">
+                いちいち面倒な<span className="text-indigo-400">カメラアプリ</span>
+              </h1>
+              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Gemini Vision
               </span>
-            </h1>
-            <p className="text-[10px] text-[#9A9890] font-mono tracking-wide flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#7FDBCA] inline-block"></span>
-              AI自動写真命名カメラ · Gemini Vision (ブラウザ完結)
+              <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
+                v1.3.0
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              写真の命名・文字起こし・自動仕分けはおまかせ
             </p>
           </div>
         </div>
 
+        {/* API Key setting button on the right */}
         <div className="flex items-center gap-2">
+          {onOpenApiKeyModal && (
+            <button
+              onClick={onOpenApiKeyModal}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                hasApiKey
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 animate-pulse'
+              }`}
+            >
+              <Key className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">
+                {hasApiKey ? 'My APIキー設定済み' : '自分のAPIキーを設定'}
+              </span>
+              <span className="sm:hidden">
+                {hasApiKey ? 'Key設定済' : 'Key設定'}
+              </span>
+            </button>
+          )}
+
           {/* Desktop / Tablet Nav */}
-          <nav className="hidden md:flex items-center gap-1 bg-[#242424] p-1 rounded-xl border border-[#3A3A3A]">
-            <button
-              onClick={() => setActiveTab('camera')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all ${
-                activeTab === 'camera' ? 'bg-[#7FDBCA] text-[#0F1E1C] font-semibold' : 'text-[#9A9890] hover:text-[#F2F0EC]'
-              }`}
-            >
-              <Camera className="w-3.5 h-3.5" />
-              カメラ撮影
-            </button>
-
-            <button
-              onClick={() => setActiveTab('gallery')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all ${
-                activeTab === 'gallery' ? 'bg-[#7FDBCA] text-[#0F1E1C] font-semibold' : 'text-[#9A9890] hover:text-[#F2F0EC]'
-              }`}
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              保存済み
-              {savedCount > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 bg-[#0F1E1C]/20 text-[10px] font-mono font-semibold rounded-full">
-                  {savedCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('pets')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all ${
-                activeTab === 'pets' ? 'bg-[#7FDBCA] text-[#0F1E1C] font-semibold' : 'text-[#9A9890] hover:text-[#F2F0EC]'
-              }`}
-            >
-              <Dog className="w-3.5 h-3.5" />
-              ペット登録
-              {petCount > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 bg-[#0F1E1C]/20 text-[10px] font-mono font-semibold rounded-full">
-                  {petCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rules')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all ${
-                activeTab === 'rules' ? 'bg-[#7FDBCA] text-[#0F1E1C] font-semibold' : 'text-[#9A9890] hover:text-[#F2F0EC]'
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5" />
-              命名ルール
-            </button>
-
-            <button
-              onClick={() => setActiveTab('guide')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all ${
-                activeTab === 'guide' ? 'bg-[#E8B04B] text-[#1A1A1A] font-semibold' : 'text-[#E8B04B]/80 hover:text-[#E8B04B]'
-              }`}
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              無課金ガイド
-            </button>
-          </nav>
-
-          {/* API Key button (always visible) */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
           <button
-            onClick={onOpenApiKey}
-            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-              hasApiKey
-                ? 'bg-[#242424] border-[#3A3A3A] text-[#9A9890] hover:text-[#F2F0EC]'
-                : 'bg-[#E8B04B]/10 border-[#E8B04B]/40 text-[#E8B04B]'
+            id="nav-camera"
+            onClick={() => setActiveTab('camera')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              activeTab === 'camera'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
-            title="Gemini APIキー設定"
           >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{hasApiKey ? 'APIキー' : 'キー未設定'}</span>
-            {!hasApiKey && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#E8B04B]" />}
+            <Camera className="w-4 h-4" />
+            カメラ撮影
           </button>
+
+          <button
+            id="nav-gallery"
+            onClick={() => setActiveTab('gallery')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              activeTab === 'gallery'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            保存済み
+            {savedCount > 0 && (
+              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                activeTab === 'gallery' ? 'bg-indigo-950 text-indigo-200' : 'bg-slate-800 text-indigo-400 border border-indigo-500/30'
+              }`}>
+                {savedCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            id="nav-pets"
+            onClick={() => setActiveTab('pets')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              activeTab === 'pets'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Dog className="w-4 h-4" />
+            ペット識別
+            {petCount > 0 && (
+              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                activeTab === 'pets' ? 'bg-indigo-950 text-pink-300' : 'bg-slate-800 text-pink-400 border border-pink-500/30'
+              }`}>
+                {petCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            id="nav-rules"
+            onClick={() => setActiveTab('rules')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              activeTab === 'rules'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            命名ルール
+          </button>
+
+          <button
+            id="nav-guide"
+            onClick={() => setActiveTab('guide')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              activeTab === 'guide'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 font-extrabold'
+                : 'text-emerald-400 hover:bg-emerald-500/10'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+            無課金ガイド
+          </button>
+        </nav>
         </div>
       </div>
 
-      {/* Mobile Tab bar at bottom / subheader for smaller screens */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-[#3A3A3A] bg-[#1A1A1A]/95 backdrop-blur-md px-1 py-1.5 justify-around text-xs">
+      {/* Mobile Nav Bar */}
+      <div className="md:hidden flex border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-2 py-1.5 justify-around text-xs font-semibold text-slate-400">
         <button
           onClick={() => setActiveTab('camera')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${activeTab === 'camera' ? 'text-[#7FDBCA]' : 'text-[#9A9890]'}`}
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'camera' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
+          }`}
         >
           <Camera className="w-4 h-4" />
-          <span className="text-[10px]">カメラ</span>
+          カメラ
         </button>
         <button
           onClick={() => setActiveTab('gallery')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg relative ${activeTab === 'gallery' ? 'text-[#7FDBCA]' : 'text-[#9A9890]'}`}
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl relative transition-all ${
+            activeTab === 'gallery' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
+          }`}
         >
           <ImageIcon className="w-4 h-4" />
-          <span className="text-[10px]">保存画像</span>
-          {savedCount > 0 && <span className="absolute top-0.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#E8B04B]"></span>}
+          ギャラリー
+          {savedCount > 0 && (
+            <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-emerald-400"></span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('pets')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${activeTab === 'pets' ? 'text-[#7FDBCA]' : 'text-[#9A9890]'}`}
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'pets' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
+          }`}
         >
           <Dog className="w-4 h-4" />
-          <span className="text-[10px]">ペット</span>
+          ペット
         </button>
         <button
           onClick={() => setActiveTab('rules')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${activeTab === 'rules' ? 'text-[#7FDBCA]' : 'text-[#9A9890]'}`}
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'rules' ? 'bg-indigo-600 text-white font-extrabold shadow-md' : 'hover:text-slate-200'
+          }`}
         >
           <Settings className="w-4 h-4" />
-          <span className="text-[10px]">ルール</span>
+          ルール
         </button>
         <button
           onClick={() => setActiveTab('guide')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg ${activeTab === 'guide' ? 'text-[#E8B04B]' : 'text-[#9A9890]'}`}
+          className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'guide' ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md' : 'text-emerald-400 hover:bg-emerald-500/10'
+          }`}
         >
           <HelpCircle className="w-4 h-4" />
-          <span className="text-[10px]">Q&A</span>
-        </button>
-        <button
-          onClick={onOpenApiKey}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-lg relative ${hasApiKey ? 'text-[#9A9890]' : 'text-[#E8B04B]'}`}
-        >
-          <KeyRound className="w-4 h-4" />
-          <span className="text-[10px]">キー</span>
-          {!hasApiKey && <span className="absolute top-0.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#E8B04B]"></span>}
+          Q&A
         </button>
       </div>
     </header>
   );
 };
+

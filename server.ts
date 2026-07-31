@@ -11,9 +11,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: "25mb" }));
 
-// Initialize Gemini client lazily/safely with optional custom API key
+// Initialize Gemini client ONLY with user-provided API key
 const getGeminiClient = (customKey?: string) => {
-  const apiKey = (customKey && customKey.trim()) ? customKey.trim() : process.env.GEMINI_API_KEY;
+  const apiKey = customKey && customKey.trim();
   if (!apiKey) {
     return null;
   }
@@ -43,28 +43,9 @@ app.post("/api/analyze-photo", async (req, res) => {
 
     const ai = getGeminiClient(userApiKey);
     if (!ai) {
-      // Fallback mock if key is missing or invalid in demo mode
-      const focusedName = focusPoint ? "タップ指定位置の対象物" : "サンプルアイテム";
-      return res.json({
-        category: "product",
-        categoryLabel: "商品・物品 (ターゲット指定)",
-        detectedTitle: focusedName,
-        suggestedFilename: `20260731_${focusedName}.jpg`,
-        confidence: 0.92,
-        details: {
-          productCategory: "指定アイテム",
-          productBrand: "不明",
-          summary: focusPoint
-            ? `タップされた位置(X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%)の特定オブジェクトに注目して認識しました。`
-            : "AI APIキーが未設定のため、デモモードで解析結果を生成しました。",
-        },
-        alternativeNames: [
-          `${focusedName}_20260731.jpg`,
-          `ターゲット名付け_${focusedName}.jpg`,
-        ],
-        explanation: focusPoint
-          ? `画像全体の複数アイテムから、タップされたピンの位置 (X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%) に最も近い対象物を認識・命名しました。`
-          : "APIキーを設定すると実際の画像認識と自動命名が行われます。",
+      return res.status(400).json({
+        error: "API_KEY_REQUIRED",
+        message: "Gemini APIキーが設定されていません。右上または案内バーからご自身のGoogle AI Studio無料APIキーを登録してください。"
       });
     }
 

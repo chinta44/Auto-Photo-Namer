@@ -1,5 +1,10 @@
 export type PhotoCategory = 'receipt' | 'pet' | 'product' | 'document' | 'other';
 
+export interface FocusPoint {
+  x: number; // 0 to 100 percentage
+  y: number; // 0 to 100 percentage
+}
+
 export interface PetProfile {
   id: string;
   name: string;
