@@ -12,6 +12,7 @@ import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig } from './types';
+import { convertToJpegBase64 } from './utils/imageUtils';
 import { Sparkles, Camera } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
@@ -91,17 +92,19 @@ export default function App() {
 
   // Main Photo Analysis Handler
   const handleCaptureImage = async (dataUrl: string) => {
-    setCurrentImageDataUrl(dataUrl);
     setIsAnalyzing(true);
     setAnalysisError(null);
 
     try {
+      const converted = await convertToJpegBase64(dataUrl);
+      setCurrentImageDataUrl(converted.fullDataUrl);
+
       const res = await fetch('/api/analyze-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageBase64: dataUrl,
-          mimeType: 'image/jpeg',
+          imageBase64: converted.base64Data,
+          mimeType: converted.mimeType,
           petProfiles,
           namingConfig,
         }),

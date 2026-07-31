@@ -18,10 +18,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header id="main-header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 text-white shadow-2xl">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-indigo-500 rounded-xl blur opacity-60 group-hover:opacity-100 transition duration-300"></div>
-            <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="w-5 h-5 text-indigo-400" />
+          <div className="relative group cursor-pointer" onClick={() => setActiveTab('camera')}>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+            <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
+              <img src="/favicon.png" alt="SmartName AI Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </div>
           <div>
