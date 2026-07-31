@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Gemini Vision
               </span>
               <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.5.0
+                v1.6.0
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
