@@ -296,7 +296,7 @@ export default function App() {
       <footer className="py-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.4.0 — Gemini Vision (PWA・個人APIキー・ターゲット認識対応)
+          いちいち面倒なカメラアプリ v1.5.0 — Gemini Vision (純正ICOファビコン・個人APIキー対応)
         </p>
       </footer>
     </div>

@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative group cursor-pointer" onClick={() => setActiveTab('camera')}>
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
             <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
-              <img src="/apple-touch-icon.png?v=1.4.0" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="/apple-touch-icon.png?v=1.5.0" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </div>
           <div>
@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Gemini Vision
               </span>
               <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.4.0
+                v1.5.0
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">

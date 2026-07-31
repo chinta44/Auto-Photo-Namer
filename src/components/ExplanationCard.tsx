@@ -200,12 +200,12 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-              v1.4.0
+              v1.5.0
             </span>
             <span>いちいち面倒なカメラアプリ (Build 2026.07.31)</span>
           </div>
           <div className="text-slate-400 text-[10px]">
-            最新アップデート: スマホショートカット・PWAアイコン対応＆ヘッダー表示の最適化
+            最新アップデート: 本物のマルチサイズICO形式ファビコン適用・キャシュクリア対応
           </div>
         </div>
       </div>
