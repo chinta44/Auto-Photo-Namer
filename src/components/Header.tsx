@@ -21,13 +21,13 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative group cursor-pointer" onClick={() => setActiveTab('camera')}>
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
             <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
-              <img src="/favicon.png" alt="SmartName AI Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="/favicon.jpg" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-extrabold text-base md:text-lg tracking-tight text-white flex items-center gap-1.5">
-                SmartName<span className="text-indigo-400">AI</span>
+                いちいち面倒な<span className="text-indigo-400">カメラアプリ</span>
               </h1>
               <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
-              AI自動写真命名・OCR解析カメラ
+              写真の命名・文字起こし・自動仕分けはおまかせ
             </p>
           </div>
         </div>
