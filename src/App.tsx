@@ -12,7 +12,7 @@ import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
 import { ApiKeyModal } from './components/ApiKeyModal';
-import { DriveBackupModal } from './components/DriveBackupModal';
+import { DataBackupModal } from './components/DataBackupModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
@@ -379,8 +379,8 @@ export default function App() {
         onSaveApiKey={handleSaveApiKey}
       />
 
-      {/* Google Drive Backup Modal */}
-      <DriveBackupModal
+      {/* Data Backup & Restore Modal */}
+      <DataBackupModal
         isOpen={isDriveModalOpen}
         onClose={() => setIsDriveModalOpen(false)}
         petProfiles={petProfiles}

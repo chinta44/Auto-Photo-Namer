@@ -85,10 +85,19 @@ export const DriveBackupModal: React.FC<DriveBackupModalProps> = ({
         await checkDriveFile(res.accessToken);
       }
     } catch (err: any) {
-      setStatusMessage({
-        type: 'error',
-        text: err.message || 'Google認証に失敗しました。ポップアップの許可を確認してください。',
-      });
+      const errMsg = err?.message || err?.code || '';
+      if (errMsg.includes('auth/unauthorized-domain')) {
+        const currentDomain = window.location.hostname;
+        setStatusMessage({
+          type: 'error',
+          text: `未承認のドメイン (${currentDomain}) からのアクセスです。Firebase Consoleでプロジェクト「boreal-breaker-hjlsj」を開き、「Authentication > 設定 > 承認済みドメイン」に「${currentDomain}」を追加してください。`,
+        });
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: err.message || 'Google認証に失敗しました。ポップアップの許可を確認してください。',
+        });
+      }
     } finally {
       setIsSigningIn(false);
     }

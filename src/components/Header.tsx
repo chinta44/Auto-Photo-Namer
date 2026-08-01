@@ -1,5 +1,5 @@
 import React from 'react';
-import { Key, Cloud, Check } from 'lucide-react';
+import { Key, Cloud, Check, HardDrive } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
@@ -56,23 +56,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Header Right Action Buttons */}
         <div className="flex items-center gap-2">
-          {/* Google Drive Backup Button */}
+          {/* Backup Button */}
           {onOpenDriveModal && (
             <button
               onClick={onOpenDriveModal}
-              title={isDriveConnected ? `Google Drive連携中${lastBackupTime ? ` (最終保存: ${lastBackupTime})` : ''}` : 'Google Drive自動バックアップ設定'}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
-                isDriveConnected
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
-                  : 'bg-slate-900 border-slate-700/80 text-slate-300 hover:bg-slate-800'
-              }`}
+              title={lastBackupTime ? `データ保存済み (最終保存: ${lastBackupTime})` : 'データバックアップ＆復元'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30"
             >
-              <Cloud className={`w-3.5 h-3.5 ${isDriveConnected ? 'text-emerald-400' : 'text-indigo-400'}`} />
-              <span className="hidden md:inline">
-                {isDriveConnected ? 'Drive連携中' : 'Driveバックアップ'}
-              </span>
-              <span className="md:hidden">Drive</span>
-              {isDriveConnected && <Check className="w-3 h-3 text-emerald-400" />}
+              <HardDrive className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden md:inline">バックアップ/復元</span>
+              <span className="md:hidden">保存/復元</span>
             </button>
           )}
 
