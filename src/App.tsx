@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { BottomNav } from './components/BottomNav';
 import { CameraView } from './components/CameraView';
 import { AnalysisModal } from './components/AnalysisModal';
 import { BatchAnalysisModal } from './components/BatchAnalysisModal';
@@ -305,7 +306,7 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 p-3 sm:p-5 md:p-8 max-w-6xl mx-auto w-full space-y-6">
+      <main className="flex-1 p-3 sm:p-5 md:p-8 max-w-6xl mx-auto w-full space-y-6 pb-28">
         {analysisError && (
           <div className="p-4 bg-red-950/60 border border-red-800 text-red-200 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-xl backdrop-blur-md">
             <span>{analysisError}</span>
@@ -432,11 +433,19 @@ export default function App() {
         onBackupSuccess={handleUpdateLastBackupTime}
       />
 
+      {/* Bottom Navigation Bar */}
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        savedCount={savedPhotos.length}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+      />
+
       {/* Modern Footer */}
-      <footer className="py-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
+      <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.1 — Gemini Vision (Google Drive自動バックアップ・純正ICOファビコン統合)
+          SmartName AI v1.0.0 — Gemini Vision (ブラウザ完結)
         </p>
       </footer>
     </div>

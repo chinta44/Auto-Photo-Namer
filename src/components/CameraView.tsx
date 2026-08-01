@@ -267,79 +267,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
           }`}
         >
           {/* Top Overlay Bar */}
-          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-auto">
-            <nav className="flex items-center gap-1 p-1.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
-              <button
-                onClick={() => setActiveTab?.('camera')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'camera'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                カメラ
-              </button>
-
-              <button
-                onClick={() => setActiveTab?.('gallery')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'gallery'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <ImageIcon className="w-3.5 h-3.5" />
-                ギャラリー
-                {savedCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 text-indigo-300 text-[10px] font-extrabold rounded-full border border-indigo-500/30">
-                    {savedCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab?.('pets')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'pets'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <Dog className="w-3.5 h-3.5" />
-                ペット
-                {petCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 text-pink-300 text-[10px] font-extrabold rounded-full border border-pink-500/30">
-                    {petCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab?.('rules')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'rules'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <Settings className="w-3.5 h-3.5" />
-                ルール
-              </button>
-
-              <button
-                onClick={() => setActiveTab?.('guide')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'guide'
-                    ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-lg shadow-emerald-500/20'
-                    : 'text-emerald-400 hover:bg-emerald-500/10'
-                }`}
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-                ガイド
-              </button>
-            </nav>
-
+          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-end pointer-events-auto">
             {/* GPS Location Toggle Button */}
             <button
               onClick={() => setIsLocationEnabled(!isLocationEnabled)}
@@ -434,18 +362,20 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </div>
           )}
 
-          {/* AI Reticle */}
+          {/* AI Reticle Target Frame */}
           {hasCameraAccess && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center pb-20">
-              <div className="w-56 h-56 border border-dashed border-indigo-400/30 rounded-2xl flex items-center justify-center relative">
-                <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-indigo-400"></div>
-                <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-indigo-400"></div>
-                <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-indigo-400"></div>
-                <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-indigo-400"></div>
-                <span className="bg-slate-950/80 text-indigo-300 text-[10px] font-mono font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full border border-indigo-500/30 backdrop-blur-md shadow-lg flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  AI TARGET READY
-                </span>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center pb-12">
+              <div className="w-64 h-64 sm:w-80 sm:h-80 border border-dashed border-cyan-400/40 rounded-3xl flex items-center justify-center relative">
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl-lg"></div>
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-cyan-400 rounded-tr-lg"></div>
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-cyan-400 rounded-bl-lg"></div>
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br-lg"></div>
+
+                {!selectedFocusPoint && (
+                  <div className="bg-slate-900/80 backdrop-blur-md text-cyan-300 text-xs font-medium px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-lg pointer-events-auto cursor-pointer hover:bg-slate-800/90 transition flex items-center gap-1.5">
+                    <span>タップで対象を指定</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -514,89 +444,67 @@ export const CameraView: React.FC<CameraViewProps> = ({
           )}
 
           {/* Floating Camera Control Bar Overlay */}
-          <div className="absolute bottom-3 left-3 right-3 z-30 p-2.5 bg-slate-950/90 backdrop-blur-xl border border-slate-800/90 rounded-3xl flex items-center justify-between shadow-2xl pointer-events-auto">
+          <div className="absolute bottom-4 left-4 right-4 z-30 px-6 py-3 bg-[#0b0f19]/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl flex items-center justify-between shadow-2xl pointer-events-auto">
             {/* Left: Mode Switch & Upload */}
-            <div className="flex items-center gap-1.5">
-              {/* Mode Toggle Button with visible top tooltip */}
-              <div className="relative group">
-                <button
-                  onClick={() => setShootMode((prev) => (prev === 'single' ? 'multi' : 'single'))}
-                  className={`px-3 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 border ${
-                    shootMode === 'multi'
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 text-indigo-300" />
-                  <span className="hidden sm:inline">
-                    {shootMode === 'multi' ? '連写モード' : '単射モード'}
-                  </span>
-                  {shootMode === 'multi' && queuedPhotos.length > 0 && (
-                    <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono text-[10px] font-extrabold">
-                      {queuedPhotos.length}
-                    </span>
-                  )}
-                </button>
-                {/* Custom Top Tooltip Popup */}
-                <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex group-focus:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
-                  {shootMode === 'multi' ? '連写: 複数枚撮ってまとめてAI判定' : '単射: 1枚撮影ごとにすぐAI判定'}
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isAnalyzing}
+                title="写真ファイルを選択・取り込み"
+                className="w-12 h-12 rounded-2xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition disabled:opacity-40 shadow-md"
+              >
+                <Upload className="w-5 h-5 text-slate-300" />
+              </button>
 
-              {/* Upload Button with visible top tooltip */}
-              <div className="relative group">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition disabled:opacity-40"
-                >
-                  <Upload className="w-4 h-4 text-indigo-400" />
-                </button>
-                <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
-                  写真ファイルを選択・取り込み
-                </div>
-              </div>
+              <button
+                onClick={() => setShootMode((prev) => (prev === 'single' ? 'multi' : 'single'))}
+                title={shootMode === 'multi' ? '連写モード: 複数枚撮って一括判定' : '単射モード: 1枚ずつ判定'}
+                className={`px-3 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 border shadow-md ${
+                  shootMode === 'multi'
+                    ? 'bg-indigo-600 border-indigo-500 text-white'
+                    : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span className="hidden sm:inline">{shootMode === 'multi' ? '連写' : '単射'}</span>
+                {shootMode === 'multi' && queuedPhotos.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono text-[10px] font-black">
+                    {queuedPhotos.length}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Center: FIXED SHUTTER BUTTON */}
-            <div className="relative group flex flex-col items-center">
-              {/* Shutter Button Tooltip / Hint */}
-              <div className="absolute bottom-full mb-2 hidden group-hover:flex pointer-events-none bg-indigo-950/90 text-indigo-200 border border-indigo-500/40 text-[11px] font-bold px-3 py-1 rounded-xl shadow-2xl whitespace-nowrap z-50">
-                {shootMode === 'multi' ? '撮影してリストに追加' : '撮影してAIでファイル命名'}
-              </div>
-
+            {/* Center: WHITE RING SHUTTER BUTTON */}
+            <div className="flex flex-col items-center">
               <button
                 id="shutter-button"
                 onClick={handleCapture}
                 disabled={isAnalyzing}
-                className="group relative p-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
+                className="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white/90 p-1 bg-transparent hover:scale-105 active:scale-95 transition-transform flex items-center justify-center disabled:opacity-50 shadow-2xl"
               >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-slate-950 border-2 border-white/80 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner flex items-center justify-center">
-                    {shootMode === 'multi' && (
-                      <span className="text-[10px] font-black text-slate-900 font-mono">
-                        +{queuedPhotos.length}
-                      </span>
-                    )}
-                  </div>
+                <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-white group-hover:bg-slate-100 transition-colors shadow-inner flex items-center justify-center">
+                  {shootMode === 'multi' && queuedPhotos.length > 0 && (
+                    <span className="text-[11px] font-black text-slate-900 font-mono">
+                      +{queuedPhotos.length}
+                    </span>
+                  )}
                 </div>
               </button>
             </div>
 
             {/* Right: Camera Switch Button */}
-            <div className="relative group">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() =>
                   setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
                 }
                 disabled={isAnalyzing || !hasCameraAccess}
-                className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition disabled:opacity-40"
+                title="インカメラ / アウトカメラ切替"
+                className="w-12 h-12 rounded-2xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition disabled:opacity-40 shadow-md"
               >
-                <RefreshCw className="w-4 h-4 text-indigo-400" />
+                <RefreshCw className="w-5 h-5 text-slate-300" />
               </button>
-              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
-                インカメラ / アウトカメラ切替
-              </div>
             </div>
           </div>
         </div>
