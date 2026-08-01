@@ -444,7 +444,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
           )}
 
           {/* Floating Camera Control Bar Overlay */}
-          <div className="absolute bottom-4 left-4 right-4 z-30 px-6 py-3 bg-[#0b0f19]/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl flex items-center justify-between shadow-2xl pointer-events-auto">
+          <div className="absolute bottom-4 left-4 right-4 z-30 px-2 py-1 bg-transparent border-0 flex items-center justify-between pointer-events-auto">
             {/* Left: Mode Switch & Upload */}
             <div className="flex items-center gap-2">
               <button
