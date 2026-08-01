@@ -6,14 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-public/favicon.ico
-public/favicon.jpg
-public/favicon.png
-public/favicon-16x16.png
-public/favicon-32x32.png
-public/apple-touch-icon.png
-public/apple-touch-icon-precomposed.png
-public/android-chrome-192x192.png
-public/android-chrome-512x512.png
-public/android-chrome-192x192-maskable.png
-public/android-chrome-512x512-maskable.png
