@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SavedPhoto, PhotoCategory } from '../types';
-import { Download, Copy, Trash2, Search, Filter, FileSpreadsheet, Tag, Receipt, Dog, Package, FileText, HelpCircle, Check } from 'lucide-react';
+import { Download, Copy, Trash2, Search, Filter, FileSpreadsheet, Tag, Receipt, Dog, Package, FileText, HelpCircle, Check, FolderDown } from 'lucide-react';
+import { downloadImageWithPicker } from '../utils/fileSaveUtils';
 
 interface PhotoGalleryProps {
   photos: SavedPhoto[];
@@ -11,6 +12,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [downloadedPhotoIds, setDownloadedPhotoIds] = useState<string[]>([]);
 
   const filteredPhotos = photos.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
@@ -43,13 +45,11 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDownload = (photo: SavedPhoto) => {
-    const link = document.createElement('a');
-    link.href = photo.dataUrl;
-    link.download = photo.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async (photo: SavedPhoto) => {
+    const success = await downloadImageWithPicker(photo.dataUrl, photo.filename);
+    if (success) {
+      setDownloadedPhotoIds((prev) => (prev.includes(photo.id) ? prev : [...prev, photo.id]));
+    }
   };
 
   const handleExportReceiptsCSV = () => {
@@ -223,10 +223,24 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
 
                   <button
                     onClick={() => handleDownload(photo)}
-                    className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all font-bold shadow-md shadow-indigo-600/30"
-                    title="この名前でダウンロード"
+                    className={`px-2.5 py-1.5 rounded-xl transition-all font-bold text-xs flex items-center gap-1 shadow-md ${
+                      downloadedPhotoIds.includes(photo.id)
+                        ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40 hover:bg-slate-700'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+                    }`}
+                    title={downloadedPhotoIds.includes(photo.id) ? '保存済み (フォルダを選択して再保存可能)' : 'フォルダを選択してダウンロード'}
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    {downloadedPhotoIds.includes(photo.id) ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-[11px]">保存済み</span>
+                      </>
+                    ) : (
+                      <>
+                        <FolderDown className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">ダウンロード</span>
+                      </>
+                    )}
                   </button>
 
                   <button

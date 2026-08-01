@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnalysisResult, PetProfile, SavedPhoto, FocusPoint } from '../types';
-import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw } from 'lucide-react';
+import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown } from 'lucide-react';
+import { downloadImageWithPicker } from '../utils/fileSaveUtils';
 
 interface AnalysisModalProps {
   imageDataUrl: string;
@@ -28,6 +29,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [focusPin, setFocusPin] = useState<FocusPoint | null>(null);
 
   const handlePreviewImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -63,15 +66,16 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadImage = () => {
-    const link = document.createElement('a');
-    link.href = imageDataUrl;
-    link.download = selectedFilename.endsWith('.jpg') || selectedFilename.endsWith('.png')
-      ? selectedFilename
-      : `${selectedFilename}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadImage = async () => {
+    setIsDownloading(true);
+    try {
+      const success = await downloadImageWithPicker(imageDataUrl, selectedFilename);
+      if (success) {
+        setIsDownloaded(true);
+      }
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleSave = () => {
@@ -349,10 +353,20 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
         <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-wrap gap-2 justify-end">
           <button
             onClick={handleDownloadImage}
-            className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+            disabled={isDownloading}
+            className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+              isDownloaded
+                ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40 hover:bg-slate-700'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+            }`}
+            title="保存先のフォルダ・ダイアログを選択してダウンロードします"
           >
-            <Download className="w-4 h-4" />
-            名前をつけて保存 (ダウンロード)
+            {isDownloaded ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <FolderDown className="w-4 h-4" />
+            )}
+            <span>{isDownloaded ? '保存済み (再ダウンロード可)' : 'フォルダ選択してダウンロード'}</span>
           </button>
 
           <button
@@ -365,7 +379,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
             }`}
           >
             {isSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {isSaved ? 'アプリに保存済み' : 'アプリに保存'}
+            {isSaved ? 'アプリ内に保存済み' : 'アプリギャラリーに保存'}
           </button>
         </div>
       </div>
