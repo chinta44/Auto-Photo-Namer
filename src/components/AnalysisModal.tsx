@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AnalysisResult, PetProfile, SavedPhoto, FocusPoint } from '../types';
-import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown } from 'lucide-react';
+import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown, Utensils } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
 
 interface AnalysisModalProps {
@@ -47,14 +47,16 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
+      case 'food':
+        return <Utensils className="w-5 h-5 text-amber-400" />;
       case 'receipt':
         return <Receipt className="w-5 h-5 text-emerald-400" />;
       case 'pet':
-        return <Dog className="w-5 h-5 text-amber-400" />;
+        return <Dog className="w-5 h-5 text-pink-400" />;
       case 'product':
         return <Package className="w-5 h-5 text-indigo-400" />;
       case 'document':
-        return <FileText className="w-5 h-5 text-blue-400" />;
+        return <FileText className="w-5 h-5 text-purple-400" />;
       default:
         return <HelpCircle className="w-5 h-5 text-slate-400" />;
     }
@@ -206,6 +208,17 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
 
               {/* Detail Chips */}
               <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                {analysis.details.restaurantName && (
+                  <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold rounded-lg flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                    店舗: {analysis.details.restaurantName}
+                  </span>
+                )}
+                {analysis.details.dishName && (
+                  <span className="px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-300 font-medium rounded-lg">
+                    料理: {analysis.details.dishName}
+                  </span>
+                )}
                 {analysis.details.receiptStore && (
                   <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 font-medium rounded-lg">
                     店舗: {analysis.details.receiptStore}

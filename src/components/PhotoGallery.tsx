@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SavedPhoto, PhotoCategory } from '../types';
-import { Download, Copy, Trash2, Search, Filter, FileSpreadsheet, Tag, Receipt, Dog, Package, FileText, HelpCircle, Check, FolderDown } from 'lucide-react';
+import { Download, Copy, Trash2, Search, Filter, FileSpreadsheet, Tag, Receipt, Dog, Package, FileText, HelpCircle, Check, FolderDown, Utensils, MapPin } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
 
 interface PhotoGalleryProps {
@@ -26,14 +26,16 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
 
   const getCategoryIcon = (category: PhotoCategory) => {
     switch (category) {
+      case 'food':
+        return <Utensils className="w-4 h-4 text-amber-400" />;
       case 'receipt':
         return <Receipt className="w-4 h-4 text-emerald-400" />;
       case 'pet':
-        return <Dog className="w-4 h-4 text-amber-400" />;
+        return <Dog className="w-4 h-4 text-pink-400" />;
       case 'product':
         return <Package className="w-4 h-4 text-indigo-400" />;
       case 'document':
-        return <FileText className="w-4 h-4 text-blue-400" />;
+        return <FileText className="w-4 h-4 text-purple-400" />;
       default:
         return <HelpCircle className="w-4 h-4 text-slate-400" />;
     }
@@ -95,18 +97,26 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
 
         {/* Filter & CSV Actions */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold overflow-x-auto scrollbar-none">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
                 selectedCategory === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               すべて
             </button>
             <button
+              onClick={() => setSelectedCategory('food')}
+              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
+                selectedCategory === 'food' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              料理・グルメ
+            </button>
+            <button
               onClick={() => setSelectedCategory('receipt')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
                 selectedCategory === 'receipt' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -114,7 +124,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
             </button>
             <button
               onClick={() => setSelectedCategory('pet')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
                 selectedCategory === 'pet' ? 'bg-pink-600 text-white shadow-md shadow-pink-600/20' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -122,7 +132,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
             </button>
             <button
               onClick={() => setSelectedCategory('product')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
                 selectedCategory === 'product' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -185,6 +195,13 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
                   <p className="text-[11px] text-slate-300 font-medium line-clamp-1">
                     {photo.analysis.detectedTitle} {photo.analysis.details.receiptAmount && `(${photo.analysis.details.receiptAmount})`}
                   </p>
+
+                  {(photo.analysis.details.restaurantName || photo.location?.placeName) && (
+                    <span className="text-[10px] text-amber-300 bg-amber-950/60 border border-amber-700/60 px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1 w-fit">
+                      <MapPin className="w-3 h-3 text-amber-400" />
+                      {photo.analysis.details.restaurantName || photo.location?.placeName}
+                    </span>
+                  )}
 
                   {photo.customTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">

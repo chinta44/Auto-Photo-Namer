@@ -7,13 +7,14 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { CameraView } from './components/CameraView';
 import { AnalysisModal } from './components/AnalysisModal';
+import { BatchAnalysisModal } from './components/BatchAnalysisModal';
 import { PetManagerModal } from './components/PetManagerModal';
 import { PhotoGallery } from './components/PhotoGallery';
 import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { DataBackupModal } from './components/DataBackupModal';
-import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint } from './types';
+import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { Sparkles, Camera, Key } from 'lucide-react';
@@ -196,8 +197,13 @@ export default function App() {
     } catch (e) {}
   };
 
+  // Batch Analysis Modal State
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [batchQueuedItems, setBatchQueuedItems] = useState<BatchPhotoItem[]>([]);
+  const [batchLocationData, setBatchLocationData] = useState<LocationData | null>(null);
+
   // Main Photo Analysis Handler
-  const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint) => {
+  const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null) => {
     if (!userApiKey) {
       setIsApiKeyModalOpen(true);
       setAnalysisError('写真の解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
@@ -225,6 +231,7 @@ export default function App() {
           petProfiles,
           namingConfig,
           focusPoint,
+          location,
           customApiKey: userApiKey,
         }),
       });
@@ -247,8 +254,27 @@ export default function App() {
     }
   };
 
+  const handleStartBatchAnalysis = (items: BatchPhotoItem[], location?: LocationData | null) => {
+    if (!userApiKey) {
+      setIsApiKeyModalOpen(true);
+      setAnalysisError('一括写真解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
+      return;
+    }
+    setBatchQueuedItems(items);
+    setBatchLocationData(location || null);
+    setIsBatchModalOpen(true);
+  };
+
   const handleSaveToGallery = (photo: SavedPhoto) => {
     setSavedPhotos((prev) => [photo, ...prev]);
+  };
+
+  const handleSaveMultipleToGallery = (photos: SavedPhoto[]) => {
+    setSavedPhotos((prev) => {
+      const existingIds = new Set(prev.map((p) => p.id));
+      const newUnique = photos.filter((p) => !existingIds.has(p.id));
+      return [...newUnique, ...prev];
+    });
   };
 
   const handleAddPet = (pet: PetProfile) => {
@@ -321,6 +347,7 @@ export default function App() {
           <div className="space-y-6">
             <CameraView
               onCaptureImage={handleCaptureImage}
+              onStartBatchAnalysis={handleStartBatchAnalysis}
               isAnalyzing={isAnalyzing}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -354,7 +381,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Analysis Output Modal */}
+      {/* Analysis Output Modal (Single Photo) */}
       {currentAnalysis && currentImageDataUrl && (
         <AnalysisModal
           imageDataUrl={currentImageDataUrl}
@@ -370,6 +397,18 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Batch Analysis Modal (Multiple Photos) */}
+      <BatchAnalysisModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        queuedItems={batchQueuedItems}
+        petProfiles={petProfiles}
+        namingConfig={namingConfig}
+        userApiKey={userApiKey}
+        onSaveToGallery={handleSaveMultipleToGallery}
+        locationData={batchLocationData}
+      />
 
       {/* API Key Settings Modal */}
       <ApiKeyModal

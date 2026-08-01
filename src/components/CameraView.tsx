@@ -1,9 +1,28 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, Upload, RefreshCw, Sparkles, Image as ImageIcon, Dog, Settings, HelpCircle, Zap, AlertCircle, Target, MapPin } from 'lucide-react';
-import { FocusPoint } from '../types';
+import {
+  Camera,
+  Upload,
+  RefreshCw,
+  Sparkles,
+  Image as ImageIcon,
+  Dog,
+  Settings,
+  HelpCircle,
+  Zap,
+  AlertCircle,
+  Target,
+  MapPin,
+  Layers,
+  X,
+  Trash2,
+  Utensils
+} from 'lucide-react';
+import { FocusPoint, LocationData, BatchPhotoItem } from '../types';
+import { getCurrentLocationData } from '../utils/locationService';
 
 interface CameraViewProps {
-  onCaptureImage: (dataUrl: string, focusPoint?: FocusPoint) => void;
+  onCaptureImage: (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null) => void;
+  onStartBatchAnalysis: (items: BatchPhotoItem[], location?: LocationData | null) => void;
   isAnalyzing: boolean;
   activeTab?: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
   setActiveTab?: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
@@ -13,6 +32,7 @@ interface CameraViewProps {
 
 export const CameraView: React.FC<CameraViewProps> = ({
   onCaptureImage,
+  onStartBatchAnalysis,
   isAnalyzing,
   activeTab = 'camera',
   setActiveTab,
@@ -27,6 +47,31 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [flashEffect, setFlashEffect] = useState(false);
+
+  // Mode: 'single' (1枚ずつすぐ命名) or 'multi' (複数枚撮ってから一括命名)
+  const [shootMode, setShootMode] = useState<'single' | 'multi'>('single');
+  const [queuedPhotos, setQueuedPhotos] = useState<BatchPhotoItem[]>([]);
+
+  // Location / GPS Detection State
+  const [isLocationEnabled, setIsLocationEnabled] = useState(true);
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Fetch Location when enabled
+  const fetchLocation = async () => {
+    setIsFetchingLocation(true);
+    const loc = await getCurrentLocationData();
+    setLocationData(loc);
+    setIsFetchingLocation(false);
+  };
+
+  useEffect(() => {
+    if (isLocationEnabled) {
+      fetchLocation();
+    } else {
+      setLocationData(null);
+    }
+  }, [isLocationEnabled]);
 
   // Play shutter sound effect via Web Audio API
   const playShutterSound = () => {
@@ -43,14 +88,12 @@ export const CameraView: React.FC<CameraViewProps> = ({
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.09);
-    } catch (e) {
-      // Audio context might be restricted
-    }
+    } catch (e) {}
   };
 
   const startCamera = async () => {
     setCameraError(null);
-    setHasCameraAccess(null); // loading state
+    setHasCameraAccess(null);
 
     try {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -73,7 +116,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
           audio: false,
         });
       } catch (e1) {
-        // Fallback constraint for devices that fail with width/height ideal constraints
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facingMode },
           audio: false,
@@ -141,21 +183,64 @@ export const CameraView: React.FC<CameraViewProps> = ({
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      onCaptureImage(dataUrl, selectedFocusPoint || undefined);
+
+      if (shootMode === 'single') {
+        onCaptureImage(dataUrl, selectedFocusPoint || undefined, locationData);
+      } else {
+        // Multi-shot mode: append to queued list
+        const newItem: BatchPhotoItem = {
+          id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          dataUrl,
+          focusPoint: selectedFocusPoint || undefined,
+        };
+        setQueuedPhotos((prev) => [...prev, newItem]);
+        setSelectedFocusPoint(null); // reset focus point for next shot
+      }
     }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newItems: BatchPhotoItem[] = [];
+    let processed = 0;
+
+    Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          onCaptureImage(event.target.result as string);
+          const dataUrl = event.target.result as string;
+          if (shootMode === 'single' && files.length === 1) {
+            onCaptureImage(dataUrl, undefined, locationData);
+          } else {
+            newItems.push({
+              id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              dataUrl,
+            });
+            processed++;
+            if (processed === files.length) {
+              setQueuedPhotos((prev) => [...prev, ...newItems]);
+              if (shootMode === 'single' && files.length > 1) {
+                setShootMode('multi'); // Auto-switch to multi mode if multiple files uploaded
+              }
+            }
+          }
         }
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveQueuedPhoto = (id: string) => {
+    setQueuedPhotos((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleTriggerBatchAnalysis = () => {
+    if (queuedPhotos.length === 0) return;
+    onStartBatchAnalysis(queuedPhotos, locationData);
   };
 
   return (
@@ -173,10 +258,12 @@ export const CameraView: React.FC<CameraViewProps> = ({
         {/* Video Viewport - Maximized to screen height */}
         <div
           onClick={hasCameraAccess ? handleVideoClick : undefined}
-          className={`relative w-full h-[62vh] sm:h-[72vh] min-h-[420px] max-h-[800px] bg-slate-950 flex items-center justify-center overflow-hidden ${hasCameraAccess ? 'cursor-crosshair' : ''}`}
+          className={`relative w-full h-[60vh] sm:h-[68vh] min-h-[400px] max-h-[780px] bg-slate-950 flex items-center justify-center overflow-hidden ${
+            hasCameraAccess ? 'cursor-crosshair' : ''
+          }`}
         >
           {/* Top Overlay Navigation inside Camera Preview Frame */}
-          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-center pointer-events-auto">
+          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-auto">
             <nav className="flex items-center gap-1 p-1.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab?.('camera')}
@@ -248,6 +335,22 @@ export const CameraView: React.FC<CameraViewProps> = ({
                 ガイド
               </button>
             </nav>
+
+            {/* GPS Location Toggle Button */}
+            <button
+              onClick={() => setIsLocationEnabled(!isLocationEnabled)}
+              title={isLocationEnabled ? '位置情報をAI命名に活用中 (クリックで無効化)' : '位置情報を取得する'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold backdrop-blur-xl border shadow-xl transition-all ${
+                isLocationEnabled
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
+                  : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <MapPin className={`w-3.5 h-3.5 ${isLocationEnabled ? 'text-amber-400 animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">
+                {isLocationEnabled ? '位置情報: ON' : '位置情報: OFF'}
+              </span>
+            </button>
           </div>
 
           <video
@@ -255,7 +358,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
             autoPlay
             playsInline
             muted
-            className={hasCameraAccess ? "w-full h-full object-cover" : "hidden"}
+            className={hasCameraAccess ? 'w-full h-full object-cover' : 'hidden'}
           />
 
           {!hasCameraAccess && (
@@ -264,7 +367,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
                 <Camera className="w-8 h-8" />
               </div>
               <p className="text-sm font-semibold text-slate-300 max-w-md mx-auto leading-relaxed">
-                {cameraError || "カメラを起動しています..."}
+                {cameraError || 'カメラを起動しています...'}
               </p>
               <div className="flex flex-wrap justify-center gap-3 pt-2">
                 <button
@@ -301,6 +404,20 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </div>
           )}
 
+          {/* Location / Shop Badge Overlay */}
+          {isLocationEnabled && (locationData?.placeName || locationData?.address) && (
+            <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
+              <div className="bg-slate-950/80 backdrop-blur-md border border-amber-500/40 px-3 py-1.5 rounded-2xl text-xs font-bold text-amber-200 flex items-center gap-2 shadow-2xl">
+                <MapPin className="w-4 h-4 text-amber-400 animate-bounce" />
+                <span>
+                  {locationData.placeName
+                    ? `周辺スポット: ${locationData.placeName}`
+                    : `現在地: ${locationData.address}`}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Target Reticle Overlay for AI Camera feel */}
           {hasCameraAccess && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center pt-8">
@@ -329,12 +446,87 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   Gemini AI 解析中...
                 </p>
                 <p className="text-xs text-slate-400 font-medium">
-                  領収書OCR・ペット顔識別・自動判定を実施しています
+                  飲食店・店舗名特定・領収書OCR・ペット識別を実施しています
                 </p>
               </div>
             </div>
           )}
         </div>
+
+        {/* Mode Selector & Control Strip */}
+        <div className="p-3 bg-slate-950/80 border-t border-slate-800/80 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setShootMode('single')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              shootMode === 'single'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            単射（1枚すぐ名付け）
+          </button>
+          <button
+            onClick={() => setShootMode('multi')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              shootMode === 'multi'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            連写・複数枚撮影（撮影後に一括名付け）
+            {queuedPhotos.length > 0 && (
+              <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono text-[10px]">
+                {queuedPhotos.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Queued Photos Tray (Multi-Shot Mode) */}
+        {shootMode === 'multi' && queuedPhotos.length > 0 && (
+          <div className="p-4 bg-slate-900 border-t border-slate-800 space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-indigo-400" />
+                撮影・選択済みの写真 ({queuedPhotos.length}枚)
+              </span>
+              <button
+                onClick={() => setQueuedPhotos([])}
+                className="text-[11px] text-rose-400 hover:underline flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                全消去
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
+              {queuedPhotos.map((item, index) => (
+                <div key={item.id} className="relative group shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                  <img src={item.dataUrl} alt={`Queued ${index}`} className="w-full h-full object-cover" />
+                  <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-slate-950/80 border border-slate-700 text-white text-[10px] font-mono font-bold flex items-center justify-center">
+                    {index + 1}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveQueuedPhoto(item.id)}
+                    className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full opacity-80 group-hover:opacity-100 transition"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleTriggerBatchAnalysis}
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-bold text-xs rounded-2xl transition shadow-xl flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>選択した{queuedPhotos.length}枚の写真を一括AI名付け解析する</span>
+            </button>
+          </div>
+        )}
 
         {/* Camera Control Bar */}
         <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between">
@@ -342,16 +534,19 @@ export const CameraView: React.FC<CameraViewProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={isAnalyzing}
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-40"
-            title="アルバムから選択"
+            title="アルバムから選択 (複数可)"
           >
             <Upload className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">ファイル選択</span>
+            <span className="hidden sm:inline">
+              {shootMode === 'multi' ? '複数ファイル選択' : 'ファイル選択'}
+            </span>
           </button>
 
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple={shootMode === 'multi'}
             className="hidden"
             onChange={handleFileUpload}
           />
@@ -364,7 +559,13 @@ export const CameraView: React.FC<CameraViewProps> = ({
             className="group relative p-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
           >
             <div className="w-16 h-16 rounded-full bg-slate-950 border-2 border-white/80 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner"></div>
+              <div className="w-12 h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner flex items-center justify-center">
+                {shootMode === 'multi' && (
+                  <span className="text-[10px] font-black text-slate-900 font-mono">
+                    +{queuedPhotos.length}
+                  </span>
+                )}
+              </div>
             </div>
           </button>
 

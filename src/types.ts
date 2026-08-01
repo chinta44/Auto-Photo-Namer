@@ -1,4 +1,11 @@
-export type PhotoCategory = 'receipt' | 'pet' | 'product' | 'document' | 'other';
+export type PhotoCategory = 'receipt' | 'pet' | 'product' | 'document' | 'food' | 'other';
+
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  placeName?: string;
+}
 
 export interface FocusPoint {
   x: number; // 0 to 100 percentage
@@ -34,10 +41,14 @@ export interface AnalysisResult {
     productBrand?: string;
     documentType?: string;
     documentSummary?: string;
+    restaurantName?: string;
+    foodDishName?: string;
+    locationAddress?: string;
     summary?: string;
   };
   alternativeNames: string[];
   explanation: string;
+  location?: LocationData;
 }
 
 export interface SavedPhoto {
@@ -49,6 +60,19 @@ export interface SavedPhoto {
   timestamp: string;
   customTags: string[];
   notes: string;
+  location?: LocationData;
+}
+
+export interface BatchPhotoItem {
+  id: string;
+  dataUrl: string;
+  focusPoint?: FocusPoint;
+  analysis?: AnalysisResult;
+  isAnalyzing?: boolean;
+  error?: string;
+  selectedFilename?: string;
+  isSaved?: boolean;
+  isDownloaded?: boolean;
 }
 
 export interface NamingRuleConfig {
