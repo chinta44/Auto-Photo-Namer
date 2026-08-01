@@ -29,24 +29,24 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* App Title & Logo */}
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-cyan-400 shadow-md cursor-pointer hover:border-cyan-500/50 transition-all shrink-0"
-            onClick={() => setActiveTab('camera')}
-          >
-            <Sparkles className="w-5 h-5 text-cyan-400" />
+          <div className="relative group cursor-pointer shrink-0" onClick={() => setActiveTab('camera')}>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-cyan-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+            <div className="relative w-10 h-10 bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg">
+              <img src="/apple-touch-icon.png?v=1.6.1" alt="いちいち面倒なカメラアプリ" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-extrabold text-base sm:text-lg tracking-tight text-white">
-                SmartName AI
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <h1 className="font-extrabold text-base sm:text-lg tracking-tight text-white flex items-center gap-1">
+                いちいち面倒な<span className="text-cyan-400">カメラアプリ</span>
               </h1>
-              <span className="px-1.5 py-0.5 bg-slate-800/90 text-slate-400 text-[10px] font-mono font-medium rounded border border-slate-700/60">
-                v1.0.0
+              <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px] font-mono font-bold rounded-md">
+                v1.6.1
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
-              AI自動写真命名カメラ · Gemini Vision (ブラウザ完結)
+              Gemini Vision (ブラウザ完結) · 写真の命名・文字起こし・自動仕分け
             </p>
           </div>
         </div>
