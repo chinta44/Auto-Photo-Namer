@@ -118,7 +118,7 @@ JSONフォーマットで回答してください。`;
     let response;
     try {
       response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         contents: [
           {
             inlineData: {
@@ -204,9 +204,9 @@ JSONフォーマットで回答してください。`;
         },
       });
     } catch (primaryErr: any) {
-      console.warn("Primary model gemini-2.5-flash failed, trying gemini-1.5-flash fallback...", primaryErr.message);
+      console.warn("Primary model gemini-3.6-flash failed, trying gemini-flash-latest fallback...", primaryErr.message);
       response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-flash-latest",
         contents: [
           {
             inlineData: {
@@ -233,21 +233,10 @@ JSONフォーマットで回答してください。`;
     res.json(result);
   } catch (err: any) {
     console.error("Error analyzing photo:", err);
-    // Provide a graceful fallback response so user testing/demos never fail with error popups
-    res.json({
-      category: "food",
-      categoryLabel: "料理・グルメ",
-      detectedTitle: "美味しい料理",
-      suggestedFilename: "20260731_お料理写真.jpg",
-      confidence: 0.88,
-      details: {
-        summary: "Gemini API接続による料理命名サンプル結果です。",
-      },
-      alternativeNames: [
-        "20260731_グルメ写真_01.jpg",
-        "ランチ写真.png"
-      ],
-      explanation: "写真内の料理と位置情報を参考にAIが名前を付けました。",
+    // Return explicit error status if API key is wrong or request failed
+    res.status(500).json({
+      error: "ANALYSIS_FAILED",
+      message: `AI画像の分析中にエラーが発生しました: ${err.message || 'モデル通信エラー'}`
     });
   }
 });
