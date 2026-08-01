@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { getJSTDateString } from '../utils/dateUtils';
 import { User } from 'firebase/auth';
 import {
   initDriveAuth,
@@ -97,7 +98,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
   const handleExportToFile = () => {
     try {
       const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10);
+      const dateStr = getJSTDateString();
       const payload: BackupDataPayload = {
         version: '1.6.1',
         timestamp: now.toISOString(),

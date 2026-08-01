@@ -58,9 +58,17 @@ app.post("/api/analyze-photo", async (req, res) => {
       ? `登録済みのペット一覧:\n` + petProfiles.map((p: any) => `- ID: ${p.id}, 名前: ${p.name}, 種類: ${p.species}, 特徴: ${p.breedOrDescription}`).join("\n")
       : "登録されたペットはありません。";
 
+    // Calculate current Japan Standard Time (JST) date to avoid UTC offset issues
+    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    const yearJST = nowJST.getFullYear();
+    const monthJST = String(nowJST.getMonth() + 1).padStart(2, '0');
+    const dayJST = String(nowJST.getDate()).padStart(2, '0');
+    const todayYYYYMMDD = `${yearJST}${monthJST}${dayJST}`;
+    const todayYYYYMMDDHyphen = `${yearJST}-${monthJST}-${dayJST}`;
+
     const namingRulesText = namingConfig
-      ? `命名ルールの希望: 日付フォーマット=${namingConfig.dateFormat}, 区切り文字="${namingConfig.separator}", カテゴリ含む=${namingConfig.includeCategory}, 金額含む=${namingConfig.includeAmount}`
-      : "一般的な見やすい日本語・英数字で自動作成してください。";
+      ? `命名ルールの希望: 日付フォーマット=${namingConfig.dateFormat} (選択されている日付表記: ${namingConfig.dateFormat === 'YYYY-MM-DD' ? todayYYYYMMDDHyphen : namingConfig.dateFormat === 'YYYYMMDD' ? todayYYYYMMDD : '日付なし'}), 区切り文字="${namingConfig.separator}", カテゴリ含む=${namingConfig.includeCategory}, 金額含む=${namingConfig.includeAmount}`
+      : `本日の日付: ${todayYYYYMMDD}`;
 
     const focusInstruction = (focusPoint && typeof focusPoint.x === 'number' && typeof focusPoint.y === 'number')
       ? `\n\n★【最重要指示：タップ指定位置(ターゲット)へのピンポイント注目】\nユーザーは画像内の特定位置「左から${Math.round(focusPoint.x)}%、上から${Math.round(focusPoint.y)}%」の場所（タップしたポイント）をターゲットに指定しました。\n画像全体の中に複数種類の物体や背景があっても、この指定座標（X: ${Math.round(focusPoint.x)}%, Y: ${Math.round(focusPoint.y)}%）のすぐ近くにある特定の物体/アイテムに完全にフォーカスを絞り、その指定対象物の名前を最優先してファイル名を作成してください！`
@@ -70,28 +78,32 @@ app.post("/api/analyze-photo", async (req, res) => {
       ? `\n\n★【位置情報・店舗検索情報】\n撮影場所の位置情報: 緯度=${location.latitude}, 経度=${location.longitude}` +
         (location.address ? `, 住所/ランドマーク: ${location.address}` : '') +
         (location.placeName ? `, 検出された近隣店舗/スポット名候補: ${location.placeName}` : '') +
-        `\nもし写真が料理や飲食店・カフェでの撮影である場合、この位置情報・施設名・背景の雰囲気・メニュー表記等を参考に店舗名を特定し、ファイル名を『店舗名_料理名_日付.jpg』形式（例: "サイゼリヤ_ミラノ風ドリア_20260731.jpg", "コメダ珈琲_シロノワール.jpg"）で作成してください！`
+        `\nもし写真が料理や飲食店・カフェでの撮影である場合、この位置情報・施設名・背景の雰囲気・メニュー表記等を参考に店舗名を特定し、ファイル名を『店舗名_料理名_${todayYYYYMMDD}.jpg』形式で作成してください！`
       : "";
 
     const prompt = `あなたはAndroidおよびスマートフォン向けの高精度写真自動命名AIアシスタントです。
 提供された画像を解析して、最適なファイル名と詳細情報を出力してください。${focusInstruction}${locationInstruction}
 
+★【超重要：本日の日本日付 (JST)】
+撮影・分析実行日: ${todayYYYYMMDD} (${yearJST}年${monthJST}月${dayJST}日)
+領収書等に明確な取引日付が印字されていない場合、ファイル名に含める日付は必ずこの本日日付(${todayYYYYMMDD} または ${todayYYYYMMDDHyphen})を使用してください。過去や未来の適当な日付を使用しないでください！
+
 【分類ルール】
 1. 'food' (料理・グルメ・カフェ・外食): 飲食店での料理、スイーツ、飲み物、自作料理など。
    店舗情報や位置情報がある場合は店舗名を特定し「店舗名_料理名.jpg」で命名します。
-   例: "サイゼリヤ_ミラノ風ドリア_20260731.jpg", "すき家_牛丼_大盛.jpg", "手作りカレーライス.jpg"
+   例: "サイゼリヤ_ミラノ風ドリア_${todayYYYYMMDD}.jpg", "すき家_牛丼_${todayYYYYMMDD}.jpg"
 2. 'receipt' (領収書・レシート): 店名、日付、金額、購入品目を認識します。
-   例: "20260729_セブンイレブン_領収書_1280円.jpg", "ヤマダ電機_領収書.png"
+   例: "${todayYYYYMMDD}_セブンイレブン_領収書_1280円.jpg"
 3. 'pet' (ペット・動物): 犬・猫・鳥などのペット。登録済みペットの特徴と比較してください。
    ${petsContext}
    もし登録済みペットに一致すればその名前(例: "ポチ")を採用し、未登録なら種類や毛色から候補名を付けて「未登録ペット」としてフラグを立ててください。
-   例: "ポチ_20260729.jpg", "シバ犬_茶色_20260729.jpg"
+   例: "ポチ_${todayYYYYMMDD}.jpg"
 4. 'product' (商品・物品・持ち物): 日用品、家電、服、靴、食品、飲み物、本など。
    具体的な商品名やブランド、無ければ「靴」「バッグ」「緑茶」などの一般的な名前を付けます。
-   例: "ナイキ_スニーカー_赤.jpg", "コカコーラ_500ml.jpg", "ビジネスバッグ.jpg"
+   例: "ナイキ_スニーカー_赤.jpg", "コカコーラ_500ml.jpg"
 5. 'document' (書類・メモ・名刺): 契約書、メモ、チラシ、書籍のページ、看板など。
    見出しやタイトル、書類種別から名前を付けます。
-   例: "賃貸契約書_20260729.jpg", "会議メモ_企画案.jpg"
+   例: "賃貸契約書_${todayYYYYMMDD}.jpg", "会議メモ_企画案.jpg"
 6. 'other' (その他・風景): 上記に当てはまらない風景、建物など。
    例: "東京タワー_夜景.jpg", "富士山_山頂.jpg"
 

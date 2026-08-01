@@ -8,14 +8,11 @@ import {
   Dog,
   Settings,
   HelpCircle,
-  Zap,
-  AlertCircle,
   Target,
   MapPin,
   Layers,
   X,
   Trash2,
-  Utensils
 } from 'lucide-react';
 import { FocusPoint, LocationData, BatchPhotoItem } from '../types';
 import { getCurrentLocationData } from '../utils/locationService';
@@ -55,19 +52,24 @@ export const CameraView: React.FC<CameraViewProps> = ({
   // Location / GPS Detection State
   const [isLocationEnabled, setIsLocationEnabled] = useState(true);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
-  // Fetch Location when enabled
+  // Fetch Location asynchronously without blocking camera load
   const fetchLocation = async () => {
-    setIsFetchingLocation(true);
-    const loc = await getCurrentLocationData();
-    setLocationData(loc);
-    setIsFetchingLocation(false);
+    try {
+      const loc = await getCurrentLocationData();
+      setLocationData(loc);
+    } catch (e) {
+      console.warn('Location fetch skipped:', e);
+    }
   };
 
   useEffect(() => {
     if (isLocationEnabled) {
-      fetchLocation();
+      // Delay location request slightly so camera video initializes instantly first
+      const timer = setTimeout(() => {
+        fetchLocation();
+      }, 500);
+      return () => clearTimeout(timer);
     } else {
       setLocationData(null);
     }
@@ -93,34 +95,25 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
   const startCamera = async () => {
     setCameraError(null);
-    setHasCameraAccess(null);
 
     try {
       if (videoRef.current && videoRef.current.srcObject) {
         const currentStream = videoRef.current.srcObject as MediaStream;
         currentStream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
       }
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("カメラ機能がこのブラウザまたは通信環境でサポートされていません。");
       }
 
-      let stream: MediaStream | null = null;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch (e1) {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode },
-          audio: false,
-        });
-      }
+      // Fast stream request with standard constraints to eliminate device resolution negotiation delay
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facingMode,
+        },
+        audio: false,
+      });
 
       if (stream) {
         if (videoRef.current) {
@@ -164,6 +157,8 @@ export const CameraView: React.FC<CameraViewProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
+    // Prevent setting focus point behind bottom shutter bar or top nav bar
+    if (y > 80 || y < 12) return;
     setSelectedFocusPoint({ x: Math.round(x), y: Math.round(y) });
   };
 
@@ -194,7 +189,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
           focusPoint: selectedFocusPoint || undefined,
         };
         setQueuedPhotos((prev) => [...prev, newItem]);
-        setSelectedFocusPoint(null); // reset focus point for next shot
+        setSelectedFocusPoint(null); // reset focus point
       }
     }
   };
@@ -222,7 +217,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
             if (processed === files.length) {
               setQueuedPhotos((prev) => [...prev, ...newItems]);
               if (shootMode === 'single' && files.length > 1) {
-                setShootMode('multi'); // Auto-switch to multi mode if multiple files uploaded
+                setShootMode('multi');
               }
             }
           }
@@ -244,26 +239,35 @@ export const CameraView: React.FC<CameraViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4">
+    <div className="w-full max-w-5xl mx-auto space-y-3">
       {/* Hidden canvas for taking snapshots */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Main Camera / Preview Frame */}
-      <div className="relative bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
-        {/* Shutter Flash Animation overlay */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple={shootMode === 'multi'}
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Main Camera Frame */}
+      <div className="relative bg-slate-950 rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl">
+        {/* Shutter Flash Overlay */}
         {flashEffect && (
-          <div className="absolute inset-0 bg-white z-30 animate-out fade-out duration-200 pointer-events-none" />
+          <div className="absolute inset-0 bg-white z-40 animate-out fade-out duration-200 pointer-events-none" />
         )}
 
-        {/* Video Viewport - Maximized to screen height */}
+        {/* Viewport Box (Responsive height) */}
         <div
           onClick={hasCameraAccess ? handleVideoClick : undefined}
-          className={`relative w-full h-[60vh] sm:h-[68vh] min-h-[400px] max-h-[780px] bg-slate-950 flex items-center justify-center overflow-hidden ${
+          className={`relative w-full h-[65vh] sm:h-[72vh] min-h-[460px] max-h-[820px] bg-slate-950 flex items-center justify-center overflow-hidden ${
             hasCameraAccess ? 'cursor-crosshair' : ''
           }`}
         >
-          {/* Top Overlay Navigation inside Camera Preview Frame */}
-          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-auto">
+          {/* Top Overlay Bar */}
+          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-auto">
             <nav className="flex items-center gap-1 p-1.5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl max-w-full overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab?.('camera')}
@@ -388,45 +392,57 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </div>
           )}
 
-          {/* User Tap-to-Focus Point Indicator Overlay */}
+          {/* User Tap-to-Focus Point Indicator */}
           {selectedFocusPoint && (
             <div
-              className="absolute z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+              className={`absolute z-35 transform -translate-x-1/2 -translate-y-1/2 flex items-center ${
+                selectedFocusPoint.y > 55 ? 'flex-col-reverse mb-2' : 'flex-col mt-2'
+              }`}
               style={{ left: `${selectedFocusPoint.x}%`, top: `${selectedFocusPoint.y}%` }}
             >
               <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-500/20 flex items-center justify-center animate-pulse shadow-2xl">
                 <Target className="w-6 h-6 text-emerald-400" />
               </div>
-              <span className="bg-slate-900/90 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap mt-1 flex items-center gap-1">
+              <div className="bg-slate-900/95 backdrop-blur-md text-emerald-300 border border-emerald-500/50 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xl whitespace-nowrap flex items-center gap-1.5 pointer-events-auto my-1">
                 <MapPin className="w-3 h-3 text-emerald-400" />
-                指定オブジェクト命名
-              </span>
+                <span>指定オブジェクト命名</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFocusPoint(null);
+                  }}
+                  className="ml-1 p-0.5 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition"
+                  title="解除"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Location / Shop Badge Overlay */}
+          {/* Location / Shop Badge Overlay (Top Left below nav) */}
           {isLocationEnabled && (locationData?.placeName || locationData?.address) && (
-            <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
-              <div className="bg-slate-950/80 backdrop-blur-md border border-amber-500/40 px-3 py-1.5 rounded-2xl text-xs font-bold text-amber-200 flex items-center gap-2 shadow-2xl">
-                <MapPin className="w-4 h-4 text-amber-400 animate-bounce" />
+            <div className="absolute top-16 left-3 z-20 pointer-events-none">
+              <div className="bg-slate-950/80 backdrop-blur-md border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-bold text-amber-200 flex items-center gap-1.5 shadow-2xl">
+                <MapPin className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
                 <span>
                   {locationData.placeName
-                    ? `周辺スポット: ${locationData.placeName}`
+                    ? `店舗候補: ${locationData.placeName}`
                     : `現在地: ${locationData.address}`}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Target Reticle Overlay for AI Camera feel */}
+          {/* AI Reticle */}
           {hasCameraAccess && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center pt-8">
-              <div className="w-64 h-64 border border-dashed border-indigo-400/40 rounded-2xl flex items-center justify-center relative">
-                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-indigo-400"></div>
-                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-indigo-400"></div>
-                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-indigo-400"></div>
-                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-indigo-400"></div>
-                <span className="bg-slate-950/80 text-indigo-300 text-[10px] font-mono font-bold tracking-widest uppercase px-3 py-1 rounded-full border border-indigo-500/30 backdrop-blur-md shadow-lg flex items-center gap-1.5">
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center pb-20">
+              <div className="w-56 h-56 border border-dashed border-indigo-400/30 rounded-2xl flex items-center justify-center relative">
+                <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-indigo-400"></div>
+                <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-indigo-400"></div>
+                <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-indigo-400"></div>
+                <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-indigo-400"></div>
+                <span className="bg-slate-950/80 text-indigo-300 text-[10px] font-mono font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full border border-indigo-500/30 backdrop-blur-md shadow-lg flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   AI TARGET READY
                 </span>
@@ -434,7 +450,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </div>
           )}
 
-          {/* Analyzing Spinner Overlay */}
+          {/* Analyzing Overlay */}
           {isAnalyzing && (
             <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl z-30 flex flex-col items-center justify-center text-white space-y-4">
               <div className="relative">
@@ -446,141 +462,143 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   Gemini AI 解析中...
                 </p>
                 <p className="text-xs text-slate-400 font-medium">
-                  飲食店・店舗名特定・領収書OCR・ペット識別を実施しています
+                  店舗・グルメ・領収書OCR・ペット自動命名を実施しています
                 </p>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Mode Selector & Control Strip */}
-        <div className="p-3 bg-slate-950/80 border-t border-slate-800/80 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setShootMode('single')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-              shootMode === 'single'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            単射（1枚すぐ名付け）
-          </button>
-          <button
-            onClick={() => setShootMode('multi')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-              shootMode === 'multi'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            連写・複数枚撮影（撮影後に一括名付け）
-            {queuedPhotos.length > 0 && (
-              <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono text-[10px]">
-                {queuedPhotos.length}
-              </span>
-            )}
-          </button>
-        </div>
+          {/* Queued Photos Floating Tray (Multi-Shot Mode) — Positioned clearly ABOVE the shutter bar */}
+          {shootMode === 'multi' && queuedPhotos.length > 0 && (
+            <div className="absolute bottom-28 left-3 right-3 z-40 p-3 bg-slate-900/95 backdrop-blur-xl border border-indigo-500/40 rounded-2xl space-y-2.5 shadow-2xl animate-fade-in pointer-events-auto">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+                <span className="flex items-center gap-1.5 text-indigo-300">
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  撮影・選択済み ({queuedPhotos.length}枚)
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQueuedPhotos([])}
+                    className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-950/40 border border-rose-800/40"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    全消去
+                  </button>
+                  <button
+                    onClick={handleTriggerBatchAnalysis}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                    <span>一括AI名付け開始 ({queuedPhotos.length}枚)</span>
+                  </button>
+                </div>
+              </div>
 
-        {/* Queued Photos Tray (Multi-Shot Mode) */}
-        {shootMode === 'multi' && queuedPhotos.length > 0 && (
-          <div className="p-4 bg-slate-900 border-t border-slate-800 space-y-3 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-indigo-400" />
-                撮影・選択済みの写真 ({queuedPhotos.length}枚)
-              </span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {queuedPhotos.map((item, index) => (
+                  <div key={item.id} className="relative group shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-500/30 bg-slate-950 shadow-md">
+                    <img src={item.dataUrl} alt={`Queued ${index}`} className="w-full h-full object-cover" />
+                    <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-slate-950/90 border border-slate-700 text-white text-[9px] font-mono font-bold flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveQueuedPhoto(item.id)}
+                      className="absolute top-0.5 right-0.5 p-0.5 bg-rose-600 text-white rounded-full opacity-90 hover:bg-rose-500 transition shadow"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Floating Camera Control Bar Overlay */}
+          <div className="absolute bottom-3 left-3 right-3 z-30 p-2.5 bg-slate-950/90 backdrop-blur-xl border border-slate-800/90 rounded-3xl flex items-center justify-between shadow-2xl pointer-events-auto">
+            {/* Left: Mode Switch & Upload */}
+            <div className="flex items-center gap-1.5">
+              {/* Mode Toggle Button with visible top tooltip */}
+              <div className="relative group">
+                <button
+                  onClick={() => setShootMode((prev) => (prev === 'single' ? 'multi' : 'single'))}
+                  className={`px-3 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                    shootMode === 'multi'
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="hidden sm:inline">
+                    {shootMode === 'multi' ? '連写モード' : '単射モード'}
+                  </span>
+                  {shootMode === 'multi' && queuedPhotos.length > 0 && (
+                    <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono text-[10px] font-extrabold">
+                      {queuedPhotos.length}
+                    </span>
+                  )}
+                </button>
+                {/* Custom Top Tooltip Popup */}
+                <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex group-focus:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
+                  {shootMode === 'multi' ? '連写: 複数枚撮ってまとめてAI判定' : '単射: 1枚撮影ごとにすぐAI判定'}
+                </div>
+              </div>
+
+              {/* Upload Button with visible top tooltip */}
+              <div className="relative group">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition disabled:opacity-40"
+                >
+                  <Upload className="w-4 h-4 text-indigo-400" />
+                </button>
+                <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
+                  写真ファイルを選択・取り込み
+                </div>
+              </div>
+            </div>
+
+            {/* Center: FIXED SHUTTER BUTTON */}
+            <div className="relative group flex flex-col items-center">
+              {/* Shutter Button Tooltip / Hint */}
+              <div className="absolute bottom-full mb-2 hidden group-hover:flex pointer-events-none bg-indigo-950/90 text-indigo-200 border border-indigo-500/40 text-[11px] font-bold px-3 py-1 rounded-xl shadow-2xl whitespace-nowrap z-50">
+                {shootMode === 'multi' ? '撮影してリストに追加' : '撮影してAIでファイル命名'}
+              </div>
+
               <button
-                onClick={() => setQueuedPhotos([])}
-                className="text-[11px] text-rose-400 hover:underline flex items-center gap-1"
+                id="shutter-button"
+                onClick={handleCapture}
+                disabled={isAnalyzing}
+                className="group relative p-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
               >
-                <Trash2 className="w-3 h-3" />
-                全消去
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-slate-950 border-2 border-white/80 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner flex items-center justify-center">
+                    {shootMode === 'multi' && (
+                      <span className="text-[10px] font-black text-slate-900 font-mono">
+                        +{queuedPhotos.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </button>
             </div>
 
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
-              {queuedPhotos.map((item, index) => (
-                <div key={item.id} className="relative group shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
-                  <img src={item.dataUrl} alt={`Queued ${index}`} className="w-full h-full object-cover" />
-                  <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-slate-950/80 border border-slate-700 text-white text-[10px] font-mono font-bold flex items-center justify-center">
-                    {index + 1}
-                  </span>
-                  <button
-                    onClick={() => handleRemoveQueuedPhoto(item.id)}
-                    className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full opacity-80 group-hover:opacity-100 transition"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={handleTriggerBatchAnalysis}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-bold text-xs rounded-2xl transition shadow-xl flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-              <span>選択した{queuedPhotos.length}枚の写真を一括AI名付け解析する</span>
-            </button>
-          </div>
-        )}
-
-        {/* Camera Control Bar */}
-        <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isAnalyzing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-40"
-            title="アルバムから選択 (複数可)"
-          >
-            <Upload className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">
-              {shootMode === 'multi' ? '複数ファイル選択' : 'ファイル選択'}
-            </span>
-          </button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple={shootMode === 'multi'}
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-
-          {/* Shutter Button */}
-          <button
-            id="shutter-button"
-            onClick={handleCapture}
-            disabled={isAnalyzing}
-            className="group relative p-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
-          >
-            <div className="w-16 h-16 rounded-full bg-slate-950 border-2 border-white/80 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-white group-hover:scale-90 transition-transform shadow-inner flex items-center justify-center">
-                {shootMode === 'multi' && (
-                  <span className="text-[10px] font-black text-slate-900 font-mono">
-                    +{queuedPhotos.length}
-                  </span>
-                )}
+            {/* Right: Camera Switch Button */}
+            <div className="relative group">
+              <button
+                onClick={() =>
+                  setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
+                }
+                disabled={isAnalyzing || !hasCameraAccess}
+                className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition disabled:opacity-40"
+              >
+                <RefreshCw className="w-4 h-4 text-indigo-400" />
+              </button>
+              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex pointer-events-none bg-slate-900 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-xl border border-slate-700 shadow-xl whitespace-nowrap z-50">
+                インカメラ / アウトカメラ切替
               </div>
             </div>
-          </button>
-
-          {/* Camera Switch button */}
-          <button
-            onClick={() =>
-              setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
-            }
-            disabled={isAnalyzing || !hasCameraAccess}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-40"
-            title="カメラ切り替え"
-          >
-            <RefreshCw className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">カメラ切替</span>
-          </button>
+          </div>
         </div>
       </div>
     </div>

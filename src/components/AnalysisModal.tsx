@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getFormattedToday } from '../utils/dateUtils';
 import { AnalysisResult, PetProfile, SavedPhoto, FocusPoint } from '../types';
 import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown, Utensils } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
@@ -123,7 +124,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
 
     // Update filename with pet name
     const ext = selectedFilename.substring(selectedFilename.lastIndexOf('.'));
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = getFormattedToday('YYYYMMDD');
     setSelectedFilename(`${newPet.name}_${dateStr}${ext}`);
   };
 
