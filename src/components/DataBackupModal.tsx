@@ -39,7 +39,10 @@ interface DataBackupModalProps {
   petProfiles: PetProfile[];
   savedPhotos: SavedPhoto[];
   namingConfig: NamingRuleConfig;
-  onRestoreData: (restored: BackupDataPayload) => void;
+  onRestoreData: (
+    restored: BackupDataPayload,
+    mode: 'overwrite' | 'merge'
+  ) => { addedCount: number; skippedCount: number };
   isAutoBackupEnabled: boolean;
   onToggleAutoBackup: (enabled: boolean) => void;
   lastBackupTime: string | null;
@@ -60,6 +63,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
 }) => {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [restoreMode, setRestoreMode] = useState<'overwrite' | 'merge'>('merge');
 
   // Google Drive advanced section states
   const [showDriveSection, setShowDriveSection] = useState(false);
@@ -149,12 +153,21 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
           throw new Error('ファイルの形式が正しくありません (ペット情報が見つかりません)');
         }
 
-        onRestoreData(payload);
+        const { addedCount, skippedCount } = onRestoreData(payload, restoreMode);
 
-        setStatusMessage({
-          type: 'success',
-          text: `データ復元が完了しました！ (ペット: ${payload.petProfiles.length}頭, 写真: ${payload.savedPhotos?.length || 0}枚)`,
-        });
+        if (restoreMode === 'merge') {
+          setStatusMessage({
+            type: 'success',
+            text: `ペット学習データを合成しました！ (追加: ${addedCount}頭${
+              skippedCount > 0 ? ` / 既存とID重複でスキップ: ${skippedCount}頭` : ''
+            })`,
+          });
+        } else {
+          setStatusMessage({
+            type: 'success',
+            text: `データ復元が完了しました！ (ペット: ${payload.petProfiles.length}頭, 写真: ${payload.savedPhotos?.length || 0}枚)`,
+          });
+        }
       } catch (err: any) {
         setStatusMessage({
           type: 'error',
@@ -241,11 +254,20 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
     setIsDriveProcessing(true);
     try {
       const payload = await downloadBackupFromDrive(accessToken, driveFileMeta.id);
-      onRestoreData(payload);
-      setStatusMessage({
-        type: 'success',
-        text: `Google Driveからデータを復元しました！ (ペット: ${payload.petProfiles.length}頭)`,
-      });
+      const { addedCount, skippedCount } = onRestoreData(payload, restoreMode);
+      if (restoreMode === 'merge') {
+        setStatusMessage({
+          type: 'success',
+          text: `Google Driveのペット学習データを合成しました！ (追加: ${addedCount}頭${
+            skippedCount > 0 ? ` / 重複スキップ: ${skippedCount}頭` : ''
+          })`,
+        });
+      } else {
+        setStatusMessage({
+          type: 'success',
+          text: `Google Driveからデータを復元しました！ (ペット: ${payload.petProfiles.length}頭)`,
+        });
+      }
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: `Drive復元エラー: ${err.message}` });
     } finally {
@@ -334,6 +356,42 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
               ログインや初期設定は一切不要！バックアップファイルをスマホやPCの「ファイル・ダウンロード」に保存し、別のブラウザや新しいスマホで読み込むだけで一瞬で復元できます。
             </p>
 
+            {/* Restore mode toggle: overwrite vs merge */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
+                読み込み時の動作（ペット学習データ）
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRestoreMode('merge')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                    restoreMode === 'merge'
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow shadow-indigo-600/30'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  合成（追加）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRestoreMode('overwrite')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                    restoreMode === 'overwrite'
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow shadow-indigo-600/30'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  上書き（全交換）
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                {restoreMode === 'merge'
+                  ? '既存のペット学習プロファイルは残したまま、ファイル内の新しいペットだけを追加します（同じIDのペットは既存を優先しスキップ）。写真・命名ルールは変更されません。'
+                  : '現在のペット・写真・命名ルールを、読み込んだファイルの内容に完全に置き換えます。'}
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               {/* Export Button */}
               <button
@@ -358,7 +416,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                   className="w-full px-4 py-3 bg-slate-800 hover:bg-slate-700 active:bg-slate-800 text-slate-200 font-bold text-xs rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2"
                 >
                   <Upload className="w-4 h-4 text-emerald-400" />
-                  <span>端末から読み込んで復元</span>
+                  <span>端末から読み込んで{restoreMode === 'merge' ? '合成' : '復元'}</span>
                 </button>
               </div>
             </div>
@@ -420,7 +478,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                         className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 disabled:opacity-40"
                       >
                         <CloudDownload className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Driveから復元</span>
+                        <span>Driveから{restoreMode === 'merge' ? '合成' : '復元'}</span>
                       </button>
                     </div>
                   </div>
