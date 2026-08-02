@@ -205,6 +205,7 @@ export default function App() {
 
   // Main Photo Analysis Handler
   const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null) => {
+    console.log('[SmartName][App] handleCaptureImage called, hasApiKey=', !!userApiKey, 'dataUrl length=', dataUrl?.length);
     if (!userApiKey) {
       setIsApiKeyModalOpen(true);
       setAnalysisError('写真の解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
