@@ -149,8 +149,38 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [petProfiles, savedPhotos, namingConfig, isAutoBackupEnabled, isDriveConnected]);
 
-  // Restore data callback from Google Drive
-  const handleRestoreData = (payload: BackupDataPayload) => {
+  // Restore data callback from local file / Google Drive.
+  // mode: 'overwrite' replaces all data (previous behavior).
+  //       'merge' only merges pet profiles into the existing ones,
+  //       skipping any incoming pet whose id already exists locally.
+  //       savedPhotos / namingConfig are left untouched in merge mode.
+  const handleRestoreData = (
+    payload: BackupDataPayload,
+    mode: 'overwrite' | 'merge' = 'overwrite'
+  ): { addedCount: number; skippedCount: number } => {
+    if (mode === 'merge') {
+      let addedCount = 0;
+      let skippedCount = 0;
+      if (payload.petProfiles && Array.isArray(payload.petProfiles)) {
+        setPetProfiles((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const toAdd: PetProfile[] = [];
+          for (const incoming of payload.petProfiles as PetProfile[]) {
+            if (existingIds.has(incoming.id)) {
+              skippedCount++;
+            } else {
+              toAdd.push(incoming);
+              existingIds.add(incoming.id);
+              addedCount++;
+            }
+          }
+          return [...prev, ...toAdd];
+        });
+      }
+      return { addedCount, skippedCount };
+    }
+
+    // overwrite mode (default / previous behavior)
     if (payload.petProfiles && Array.isArray(payload.petProfiles)) {
       setPetProfiles(payload.petProfiles);
     }
@@ -160,6 +190,7 @@ export default function App() {
     if (payload.namingConfig) {
       setNamingConfig(payload.namingConfig);
     }
+    return { addedCount: payload.petProfiles?.length || 0, skippedCount: 0 };
   };
 
   // Current capture & analysis state
