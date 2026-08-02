@@ -15,6 +15,7 @@ import { NamingRulesModal } from './components/NamingRulesModal';
 import { ExplanationCard } from './components/ExplanationCard';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { DataBackupModal } from './components/DataBackupModal';
+import { ThemeSettingsModal, ThemeId } from './components/ThemeSettingsModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
@@ -80,6 +81,24 @@ export default function App() {
   });
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
+  // Design theme (accent/background color scheme)
+  const [theme, setTheme] = useState<ThemeId>(() => {
+    try {
+      const saved = localStorage.getItem('auto_photo_theme') as ThemeId | null;
+      return saved && ['ocean', 'forest', 'sunset', 'mono'].includes(saved) ? saved : 'ocean';
+    } catch (e) {
+      return 'ocean';
+    }
+  });
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('auto_photo_theme', theme);
+    } catch (e) {}
+  }, [theme]);
+
   // Google Drive Backup state
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isDriveConnected, setIsDriveConnected] = useState(false);
@@ -132,7 +151,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         const payload: BackupDataPayload = {
-          version: '1.6.2',
+          version: '1.6.3',
           timestamp: new Date().toISOString(),
           petProfiles,
           savedPhotos,
@@ -333,6 +352,7 @@ export default function App() {
         hasApiKey={!!userApiKey}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
         onOpenDriveModal={() => setIsDriveModalOpen(true)}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
         isDriveConnected={isDriveConnected}
         lastBackupTime={lastBackupTime}
       />
@@ -465,6 +485,14 @@ export default function App() {
         onBackupSuccess={handleUpdateLastBackupTime}
       />
 
+      {/* Theme Settings Modal */}
+      <ThemeSettingsModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentTheme={theme}
+        onSelectTheme={setTheme}
+      />
+
       {/* Bottom Navigation Bar */}
       <BottomNav
         activeTab={activeTab}
@@ -477,7 +505,7 @@ export default function App() {
       <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.2 — Gemini Vision (Google Drive自動バックアップ機能搭載)
+          いちいち面倒なカメラアプリ v1.6.3 — Gemini Vision (Google Drive自動バックアップ機能搭載)
         </p>
       </footer>
     </div>
