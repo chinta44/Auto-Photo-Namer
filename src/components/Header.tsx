@@ -1,5 +1,5 @@
 import React from 'react';
-import { Key, Sparkles, HardDrive } from 'lucide-react';
+import { Key, Sparkles, HardDrive, Palette } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
@@ -9,6 +9,7 @@ interface HeaderProps {
   hasApiKey?: boolean;
   onOpenApiKeyModal?: () => void;
   onOpenDriveModal?: () => void;
+  onOpenThemeModal?: () => void;
   isDriveConnected?: boolean;
   lastBackupTime?: string | null;
 }
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasApiKey = false,
   onOpenApiKeyModal,
   onOpenDriveModal,
+  onOpenThemeModal,
   isDriveConnected = false,
   lastBackupTime,
 }) => {
@@ -45,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
                 いちいち面倒な<span className="text-cyan-400">カメラアプリ</span>
               </h1>
               <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.6.2
+                v1.6.3
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
@@ -57,6 +59,17 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Header Right Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Theme Settings Modal Button */}
+          {onOpenThemeModal && (
+            <button
+              onClick={onOpenThemeModal}
+              title="デザインテーマを変更"
+              className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition shadow-sm"
+            >
+              <Palette className="w-4 h-4 text-indigo-400" />
+            </button>
+          )}
+
           {/* Drive Backup Modal Button */}
           {onOpenDriveModal && (
             <button
