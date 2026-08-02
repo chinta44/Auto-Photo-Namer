@@ -195,31 +195,76 @@ export const CameraView: React.FC<CameraViewProps> = ({
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[SmartName][Upload] onChange fired', e.target.files);
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      console.log('[SmartName][Upload] no files selected, aborting');
+      return;
+    }
 
+    const fileCount = files.length;
+    console.log('[SmartName][Upload] fileCount =', fileCount);
+
+    // Uploading a single file should always kick off immediate AI analysis,
+    // regardless of the current shoot mode (single/multi). Previously this
+    // depended on shootMode, so a single upload made while in "連写" (multi)
+    // mode was silently queued instead of analyzed, looking like it "did nothing".
+    if (fileCount === 1) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        console.log('[SmartName][Upload] FileReader onload, result length =', (event.target?.result as string)?.length);
+        if (event.target?.result) {
+          console.log('[SmartName][Upload] calling onCaptureImage...');
+          onCaptureImage(event.target.result as string, undefined, locationData);
+        }
+      };
+      reader.onerror = () => {
+        console.error('[SmartName][Upload] FileReader error:', reader.error);
+        window.alert('写真ファイルの読み込みに失敗しました。別の写真でお試しください。');
+      };
+      reader.readAsDataURL(file);
+
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Multiple files: queue them for batch analysis (triggered via "一括AI名付け開始")
     const newItems: BatchPhotoItem[] = [];
     let processed = 0;
+    let failed = 0;
 
     Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          const dataUrl = event.target.result as string;
-          if (shootMode === 'single' && files.length === 1) {
-            onCaptureImage(dataUrl, undefined, locationData);
-          } else {
-            newItems.push({
-              id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              dataUrl,
-            });
-            processed++;
-            if (processed === files.length) {
-              setQueuedPhotos((prev) => [...prev, ...newItems]);
-              if (shootMode === 'single' && files.length > 1) {
-                setShootMode('multi');
-              }
-            }
+          newItems.push({
+            id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            dataUrl: event.target.result as string,
+          });
+        }
+        processed++;
+        if (processed === fileCount) {
+          setQueuedPhotos((prev) => [...prev, ...newItems]);
+          if (shootMode === 'single') {
+            setShootMode('multi');
+          }
+          if (failed > 0) {
+            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
+          }
+        }
+      };
+      reader.onerror = () => {
+        console.error('Failed to read uploaded file:', file.name, reader.error);
+        failed++;
+        processed++;
+        if (processed === fileCount) {
+          setQueuedPhotos((prev) => [...prev, ...newItems]);
+          if (shootMode === 'single') {
+            setShootMode('multi');
+          }
+          if (failed > 0) {
+            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
           }
         }
       };
@@ -247,7 +292,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        multiple={shootMode === 'multi'}
+        multiple
         className="hidden"
         onChange={handleFileUpload}
       />
@@ -310,7 +355,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   カメラを再起動
                 </button>
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => { console.log('[SmartName][Upload] button clicked, fileInputRef=', fileInputRef.current); fileInputRef.current?.click(); }}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all"
                 >
                   <Upload className="w-3.5 h-3.5" />
@@ -448,7 +493,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
             {/* Left: Mode Switch & Upload */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => { console.log('[SmartName][Upload] button clicked, fileInputRef=', fileInputRef.current); fileInputRef.current?.click(); }}
                 disabled={isAnalyzing}
                 title="写真ファイルを選択・取り込み"
                 className="w-12 h-12 rounded-2xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition disabled:opacity-40 shadow-md"
