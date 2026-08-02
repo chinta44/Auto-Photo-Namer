@@ -1,0 +1,95 @@
+diff --git a/src/components/CameraView.tsx b/src/components/CameraView.tsx
+index 5d683d8..de65858 100644
+--- a/src/components/CameraView.tsx
++++ b/src/components/CameraView.tsx
+@@ -198,28 +198,66 @@ export const CameraView: React.FC<CameraViewProps> = ({
+     const files = e.target.files;
+     if (!files || files.length === 0) return;
+ 
++    const fileCount = files.length;
++
++    // Uploading a single file should always kick off immediate AI analysis,
++    // regardless of the current shoot mode (single/multi). Previously this
++    // depended on shootMode, so a single upload made while in "連写" (multi)
++    // mode was silently queued instead of analyzed, looking like it "did nothing".
++    if (fileCount === 1) {
++      const file = files[0];
++      const reader = new FileReader();
++      reader.onload = (event) => {
++        if (event.target?.result) {
++          onCaptureImage(event.target.result as string, undefined, locationData);
++        }
++      };
++      reader.onerror = () => {
++        console.error('Failed to read uploaded file:', reader.error);
++        window.alert('写真ファイルの読み込みに失敗しました。別の写真でお試しください。');
++      };
++      reader.readAsDataURL(file);
++
++      if (fileInputRef.current) fileInputRef.current.value = '';
++      return;
++    }
++
++    // Multiple files: queue them for batch analysis (triggered via "一括AI名付け開始")
+     const newItems: BatchPhotoItem[] = [];
+     let processed = 0;
++    let failed = 0;
+ 
+     Array.from(files).forEach((file: File) => {
+       const reader = new FileReader();
+       reader.onload = (event) => {
+         if (event.target?.result) {
+-          const dataUrl = event.target.result as string;
+-          if (shootMode === 'single' && files.length === 1) {
+-            onCaptureImage(dataUrl, undefined, locationData);
+-          } else {
+-            newItems.push({
+-              id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+-              dataUrl,
+-            });
+-            processed++;
+-            if (processed === files.length) {
+-              setQueuedPhotos((prev) => [...prev, ...newItems]);
+-              if (shootMode === 'single' && files.length > 1) {
+-                setShootMode('multi');
+-              }
+-            }
++          newItems.push({
++            id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
++            dataUrl: event.target.result as string,
++          });
++        }
++        processed++;
++        if (processed === fileCount) {
++          setQueuedPhotos((prev) => [...prev, ...newItems]);
++          if (shootMode === 'single') {
++            setShootMode('multi');
++          }
++          if (failed > 0) {
++            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
++          }
++        }
++      };
++      reader.onerror = () => {
++        console.error('Failed to read uploaded file:', file.name, reader.error);
++        failed++;
++        processed++;
++        if (processed === fileCount) {
++          setQueuedPhotos((prev) => [...prev, ...newItems]);
++          if (shootMode === 'single') {
++            setShootMode('multi');
++          }
++          if (failed > 0) {
++            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
+           }
+         }
+       };
+@@ -247,7 +285,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
+         ref={fileInputRef}
+         type="file"
+         accept="image/*"
+-        multiple={shootMode === 'multi'}
++        multiple
+         className="hidden"
+         onChange={handleFileUpload}
+       />
