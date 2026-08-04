@@ -18,6 +18,7 @@ import { DataBackupModal } from './components/DataBackupModal';
 import { ThemeSettingsModal, ThemeId } from './components/ThemeSettingsModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
 import { convertToJpegBase64 } from './utils/imageUtils';
+import { apiUrl } from './utils/apiConfig';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { Sparkles, Camera, Key } from 'lucide-react';
 
@@ -274,7 +275,7 @@ export default function App() {
         headers['x-gemini-api-key'] = userApiKey;
       }
 
-      const res = await fetch('/api/analyze-photo', {
+      const res = await fetch(apiUrl('/api/analyze-photo'), {
         method: 'POST',
         headers,
         body: JSON.stringify({
