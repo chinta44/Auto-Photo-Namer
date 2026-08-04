@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
 import { convertToJpegBase64 } from '../utils/imageUtils';
+import { apiUrl } from '../utils/apiConfig';
 
 interface BatchAnalysisModalProps {
   isOpen: boolean;
@@ -85,7 +86,7 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
           headers['x-gemini-api-key'] = userApiKey;
         }
 
-        const res = await fetch('/api/analyze-photo', {
+        const res = await fetch(apiUrl('/api/analyze-photo'), {
           method: 'POST',
           headers,
           body: JSON.stringify({
