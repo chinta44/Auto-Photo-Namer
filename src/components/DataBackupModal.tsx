@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getJSTDateString } from '../utils/dateUtils';
+import { saveOrShareFile } from '../utils/nativeFileSave';
 import { User } from 'firebase/auth';
 import {
   initDriveAuth,
@@ -99,12 +100,12 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
   };
 
   // 1. Export JSON file to local device (Download)
-  const handleExportToFile = () => {
+  const handleExportToFile = async () => {
     try {
       const now = new Date();
       const dateStr = getJSTDateString();
       const payload: BackupDataPayload = {
-        version: '1.6.1',
+        version: '1.6.3',
         timestamp: now.toISOString(),
         petProfiles,
         savedPhotos,
@@ -113,16 +114,12 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
 
       const jsonString = JSON.stringify(payload, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-
       const filename = `pet_namer_backup_${dateStr}.json`;
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      const result = await saveOrShareFile(blob, filename, 'application/json');
+      if (!result.success) {
+        throw new Error(result.error || '保存に失敗しました。');
+      }
 
       const formattedDate = now.toLocaleString('ja-JP');
       onBackupSuccess(formattedDate);
