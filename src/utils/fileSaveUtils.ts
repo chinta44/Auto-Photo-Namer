@@ -2,7 +2,11 @@
  * Utility to save files.
  * Default: Saves directly to browser's default Downloads folder via <a> download attribute (no popup dialog).
  * Custom: Allows user to pick a target directory handle (showDirectoryPicker) stored in IndexedDB.
+ * Native (Capacitor/Android): Neither of the above browser-only APIs work inside a WebView,
+ * so files are written via the Filesystem plugin and shared through Android's native share sheet instead.
  */
+import { Capacitor } from '@capacitor/core';
+import { saveOrShareFile } from './nativeFileSave';
 
 const DB_NAME = 'PhotoNamingAppDB';
 const DB_VERSION = 1;
@@ -72,6 +76,13 @@ export async function setSavedDirectoryInfo(handle: FileSystemDirectoryHandle | 
 }
 
 export async function pickCustomSaveDirectory(): Promise<{ success: boolean; folderName?: string; error?: string }> {
+  if (Capacitor.isNativePlatform()) {
+    return {
+      success: false,
+      error: 'アプリ版では保存先フォルダの指定機能はご利用いただけません。写真を保存する際に、Androidの共有メニューから保存先（ファイルアプリ、Google Driveなど）を毎回選べます。',
+    };
+  }
+
   if (!('showDirectoryPicker' in window)) {
     return {
       success: false,
@@ -111,6 +122,13 @@ export async function downloadImageWithPicker(
   try {
     const res = await fetch(dataUrl);
     const blob = await res.blob();
+
+    // Native app (Android): browser download & File System Access APIs don't
+    // work inside a WebView. Write via Filesystem + open the native share sheet.
+    if (Capacitor.isNativePlatform()) {
+      const result = await saveOrShareFile(blob, filename, blob.type || 'image/jpeg');
+      return result.success;
+    }
 
     // Check if custom directory is saved in IndexedDB
     const { handle: dirHandle } = await getSavedDirectoryInfo();
