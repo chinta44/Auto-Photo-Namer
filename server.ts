@@ -11,6 +11,20 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: "25mb" }));
 
+// Allow cross-origin requests from the Capacitor native app (Android), which
+// serves the bundled frontend from a local app-scheme origin (e.g.
+// https://localhost) rather than this server's own origin. Without this,
+// fetch() calls from the native app fail with "Failed to fetch" due to CORS.
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, x-gemini-api-key");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // Initialize Gemini client ONLY with user-provided API key
 const getGeminiClient = (customKey?: string) => {
   const apiKey = customKey && customKey.trim();
