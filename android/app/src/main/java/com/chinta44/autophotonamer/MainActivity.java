@@ -3,8 +3,6 @@ package com.chinta44.autophotonamer;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.webkit.PermissionRequest;
-import android.webkit.WebChromeClient;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
@@ -18,22 +16,20 @@ public class MainActivity extends BridgeActivity {
         Manifest.permission.ACCESS_COARSE_LOCATION
     };
 
+    // NOTE: We intentionally do NOT override the WebView's WebChromeClient here.
+    // Capacitor's own BridgeWebChromeClient (set automatically by BridgeActivity)
+    // already correctly handles both:
+    //   - getUserMedia() camera/mic permission requests (onPermissionRequest)
+    //   - <input type="file"> file picker dialogs (onShowFileChooser)
+    // A previous version of this file replaced the WebChromeClient with a bare
+    // one that only implemented onPermissionRequest, which fixed the camera but
+    // silently broke every file-picker button (upload photo, restore backup, etc).
+    // Requesting the runtime permissions up front (below) is enough on its own.
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Request runtime permissions up front so the WebView's getUserMedia()
-        // (camera) and geolocation calls succeed once the page asks for them.
         requestAppPermissionsIfNeeded();
-
-        // The WebView blocks camera/mic access from getUserMedia() by default
-        // unless the app explicitly grants the resources being requested here.
-        this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(() -> request.grant(request.getResources()));
-            }
-        });
     }
 
     private void requestAppPermissionsIfNeeded() {
