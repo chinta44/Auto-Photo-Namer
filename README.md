@@ -1,131 +1,113 @@
-# 📸 SmartName AI - AI写真自動命名＆整理カメラ
+# 📸 いちいち面倒なカメラアプリ (Auto-Photo-Namer)
 
-**Gemini Vision AI（Gemini 3.6 Flash）** を活用して、スマートフォンやPCで撮影・アップロードした写真を自動解析し、意味のあるファイル名を生成して保存できるWeb/PWAアプリケーションです。
+**Gemini Vision AI** を活用して、スマートフォンやPCで撮影・アップロードした写真をその場でAI解析し、意味のあるファイル名を自動生成して保存できるWeb/PWA + Androidアプリです。
 
-領収書のOCR読み取り、ペットの個体識別・命名、商品・アイテムのカテゴリ判別を全自動で行うため、写真整理の手間をゼロにします。
+領収書のOCR読み取り、ペットの個体識別・命名学習、商品・食品・書類のカテゴリ判別を全自動で行うため、写真整理の手間をゼロに近づけます。
+
+🔗 **公開URL**: https://auto-photo-namer.onrender.com
 
 ---
 
 ## ✨ 主な機能
 
-### 🧾 1. 領収書・レシートの自動OCR命名
-- 撮影された領収書から「店舗名」「撮影日付」「合計金額」をAIが自動抽出。
-- 例: `20260729_セブンイレブン_1280円.jpg`
-- 確定申告や家計簿管理の整理が圧倒的にラクになります。
+### 🧾 領収書・レシートの自動OCR命名
+撮影した領収書から「店舗名」「日付」「合計金額」「消費税」「購入品目」をAIが自動抽出してファイル名を生成します。
+例: `20260729_セブンイレブン_1280円.jpg`
 
-### 🐶 2. ペットの個体識別・名前学習
-- 初回撮影時に「名前（ポチ、タマなど）」と毛色・特徴を登録。
-- 次回からの撮影ではAIが個体を自動認識して命名。
-- 例: `ポチ_20260729.jpg`
+### 🐶 ペットの個体識別・名前学習
+名前と特徴（毛色・種類など）を一度登録すると、次回以降の撮影でAIが同じ個体を自動認識して命名します。
+- 端末やブラウザをまたいで使う場合は、学習データをJSONファイルでバックアップ/復元でき、**「上書き」と「合成（既存データに追加）」**のどちらかを選べます（同一IDは既存を優先）。
+- Googleアカウント連携で、Google Driveへの自動バックアップにも対応。
 
-### 👟 3. 商品・物品の自動カテゴリ判定
-- 撮影されたオブジェクトやブランドを即座に判定。
-- 特定が難しい場合も「靴」「バッグ」「ジュース」など汎用カテゴリ名で安全に保存。
-- 例: `ナイキ_スニーカー.jpg`
+### 👟📄🍜 商品・書類・食品の自動カテゴリ判定
+商品ブランドや料理名、書類の種別を判定し、汎用カテゴリ名でも安全に命名します。
 
-### ⚙️ 4. 柔軟な命名ルールカスタマイズ
-- **日付フォーマット**: `8桁数字 (20260729)` / `ハイフン (2026-07-29)` / `なし`
-- **単語区切り文字**: `_ (アンダースコア)` / `- (ハイフン)` / `スペース`
-- **オプション**: カテゴリ名や金額をファイル名に自動含めるかのオン/オフ切り替え
+### 📍 タップ位置でAI指定命名
+写真の中の特定の被写体をタップして指定すると、その部分に絞ってAIが再解析・再命名します(1枚の写真に複数の被写体が写っている場合に便利です)。
 
-### 💰 5. 完全無料枠での運用設計
-- Google Gemini API の無料枠（1日1,500リクエスト）を活用するため、個人使用であれば**完全無料・サーバー代ゼロ**で永久利用可能です。
+### ⚙️ 柔軟な命名ルールカスタマイズ
+- 日付フォーマット（`20260729` / `2026-07-29` / なし）
+- 単語区切り文字（`_` / `-` / スペース）
+- カテゴリ名・金額をファイル名に含めるかの切り替え
+
+### 🎨 デザインテーマ
+オーシャンブルー・フォレストグリーン・サンセットオレンジ・モノクロームの4種類からアプリ全体の配色を切り替え可能。選択内容は端末に保存されます。
+
+### 💰 完全無料枠での運用設計
+Gemini APIキーはご自身のものを画面から登録して使う方式です（[Google AI Studio](https://aistudio.google.com/)で無料取得可能）。個人利用の範囲であれば、APIコストもサーバー代も実質かけずに運用できます。
+
+### 📱 Androidアプリ版
+Capacitorを使ってAndroidアプリ化しており、APKとして端末にインストールして利用することもできます（詳細は下記「Androidアプリのビルド」参照）。
 
 ---
 
 ## 🛠️ 技術スタック
 
-- **フロントエンド**: React 18, Vite, TypeScript, Tailwind CSS
+- **フロントエンド**: React 19, Vite, TypeScript, Tailwind CSS v4
 - **アイコン**: Lucide React
-- **バックエンド/プロキシ**: Node.js / Express
-- **AIエンジン**: Google Gen AI SDK (`@google/genai`) - Gemini 3.6 Flash Vision
+- **バックエンド**: Node.js / Express（`server.ts`、Gemini APIへのプロキシ）
+- **AIエンジン**: Google Gen AI SDK (`@google/genai`) — Gemini 3.6 Flash Vision
+- **Androidアプリ化**: Capacitor（`@capacitor/android`, `@capacitor/filesystem`, `@capacitor/share`）
+- **外部連携**: Google Drive API（学習データの自動バックアップ）
 
 ---
 
 ## 🚀 ローカル開発環境のセットアップ
 
 ### 前提条件
-- Node.js v18 以上
-- npm
+- Node.js v18 以上 / npm
+- Gemini APIキー（[Google AI Studio](https://aistudio.google.com/)で無料取得）
 
-### 1. リポジトリのクローン
+### 手順
 ```bash
-git clone https://github.com/YOUR_USERNAME/smartname-ai.git
-cd smartname-ai
-```
-
-### 2. 依存パッケージのインストール
-```bash
+git clone https://github.com/chinta44/Auto-Photo-Namer.git
+cd Auto-Photo-Namer
 npm install
-```
-
-### 3. 環境変数の設定
-`.env.example` をコピーして `.env` ファイルを作成し、Gemini APIキーを設定します。
-
-```bash
-cp .env.example .env
-```
-
-`.env` 内の `GEMINI_API_KEY` に、[Google AI Studio](https://aistudio.google.com/) で取得した無料のAPIキーを入力します：
-
-```env
-GEMINI_API_KEY="AIzaSy..."
-```
-
-### 4. 開発サーバーの起動
-```bash
 npm run dev
 ```
-
-ブラウザで `http://localhost:3000` にアクセスしてアプリケーションを確認できます。
+ブラウザで `http://localhost:3000` を開き、アプリ右上の鍵アイコンからGemini APIキーを登録してください。
 
 ---
 
 ## 📦 ビルドとプロダクション実行
 
 ```bash
-# プロダクションビルド（Vite + Server Bundling）
-npm run build
-
-# 本番サーバー起動
-npm run start
+npm run build   # Vite build + サーバーバンドル
+npm run start   # 本番サーバー起動
 ```
 
 ---
 
-## 🌐 Render (render.com) へのデプロイ手順
+## 🌐 Render へのデプロイ
 
-無料クラウドプラットフォーム **Render** を使うと、GitHubにアップロードしたリポジトリから数クリックでアプリを無料公開できます。
+1. [Render](https://render.com/) にGitHubアカウントでログイン
+2. 「New +」→「Web Service」→ 本リポジトリを選択
+3. 設定:
+   - **Language**: Node
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm run start`
+   - **Instance Type**: Free
+4. 「Create Web Service」で数分後に公開URLが発行されます
 
-### 1. Renderにサインイン
-[Render (render.com)](https://render.com/) にアクセスし、GitHubアカウントでログインします。
+> Gemini APIキーはユーザーごとにアプリ画面から登録する方式のため、Render側の環境変数設定は必須ではありません。
 
-### 2. 新しい Web Service を作成
-1. ダッシュボードで **「New +」** ボタンをクリックし、**「Web Service」** を選択します。
-2. GitHubリポジトリ一覧から `smartname-ai` （本リポジトリ）を選択して **Connect** をクリックします。
+---
 
-### 3. 設定項目の入力
-以下の内容を設定します：
+## 📱 Androidアプリのビルド（APK）
 
-- **Name**: `smartname-ai` (任意のお好きな名前)
-- **Language**: `Node`
-- **Branch**: `main` (または `master`)
-- **Region**: 最寄りの地域（例: `Singapore` など）
-- **Build Command**: `npm install && npm run build`
-- **Start Command**: `npm run start`
-- **Instance Type**: `Free` (無料プラン)
+本アプリはCapacitorで Android ネイティブアプリ化しています。フロントエンドはAPKに同梱され、AI解析リクエストのみ本番サーバー（Render）と通信します。
 
-### 4. 環境変数 (Environment Variables) の設定
-画面下の **Environment Variables** セクションで以下を追加します：
+```bash
+npm install
+npm run build          # dist/ を生成
+npx cap sync android    # android/ プロジェクトに同期
+```
 
-| Key | Value | 説明 |
-| :--- | :--- | :--- |
-| `GEMINI_API_KEY` | `AIzaSy...` | Google AI Studioで取得したAPIキー |
-| `NODE_ENV` | `production` | 本番環境モード指定 |
+その後、Android Studioで `android` フォルダを開き、
+`ビルド` → `Clean Project` → `Generate App Bundles or APKs` → `Generate APKs`
+でAPKが生成されます（`android/app/build/outputs/apk/debug/app-debug.apk`）。
 
-### 5. デプロイ実行
-1. **「Create Web Service」** をクリックします。
-2. 自動的にビルドとデプロイが開始され、数分後に `https://smartname-ai.onrender.com` のような公開URLが生成されます！
+⚠️ **コードを更新した場合は、必ず上記のビルド手順を最初からやり直してください。** GitHub上のコードを更新しただけではAndroid側には反映されません。また、PC側の作業フォルダは都度GitHubから「Download ZIP」し直すことを推奨します（古いフォルダのまま作業すると更新が反映されない原因になります）。
 
 ---
 
@@ -133,15 +115,17 @@ npm run start
 
 ```text
 ├── src/
-│   ├── components/       # UIコンポーネント（カメラ、モーダル、ギャラリー等）
-│   ├── data/             # サンプルデータ・テンプレート設定
-│   ├── services/         # Gemini Vision API 呼び出しロジック
-│   ├── types.ts          # TypeScript型定義
-│   ├── App.tsx           # メインアプリケーションコンポーネント
-│   └── main.tsx          # エントリーポイント
-├── server.ts             # Express APIプロキシサーバー（APIキー保護）
-├── metadata.json         # アプリケーションメタデータ
-├── .env.example          # 環境変数サンプル
+│   ├── components/       # UIコンポーネント（カメラ、各種モーダル、ギャラリー等）
+│   ├── utils/             # Gemini/Drive連携、画像変換、ファイル保存などのロジック
+│   ├── types.ts           # TypeScript型定義
+│   ├── App.tsx             # メインアプリケーションコンポーネント
+│   ├── index.css           # グローバルスタイル・テーマ定義
+│   └── main.tsx             # エントリーポイント
+├── android/                # Capacitor Androidネイティブプロジェクト
+├── scripts/
+│   └── generate-icons.js   # アプリアイコン一式の生成スクリプト
+├── server.ts                # Express APIサーバー（Gemini呼び出し）
+├── capacitor.config.ts      # Capacitor設定
 └── package.json
 ```
 
