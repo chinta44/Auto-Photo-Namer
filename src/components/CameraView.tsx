@@ -107,10 +107,15 @@ export const CameraView: React.FC<CameraViewProps> = ({
         throw new Error("カメラ機能がこのブラウザまたは通信環境でサポートされていません。");
       }
 
-      // Fast stream request with standard constraints to eliminate device resolution negotiation delay
+      // Request the highest resolution the device's camera can provide.
+      // Without explicit width/height constraints, browsers (especially
+      // Android WebView) tend to default to a conservative low resolution
+      // (e.g. 640x480) rather than the camera's actual capability.
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
+          width: { ideal: 3840 },
+          height: { ideal: 2160 },
         },
         audio: false,
       });
