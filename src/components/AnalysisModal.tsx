@@ -153,16 +153,16 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
         {/* Modal Body */}
         <div className="p-4 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {/* Top Preview & Category Info */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-            <div className="flex flex-col items-center gap-2 shrink-0">
+          <div className="flex flex-col gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+            <div className="flex flex-col items-center gap-2 w-full">
               <div
                 onClick={handlePreviewImageClick}
-                className="relative w-36 h-36 rounded-2xl overflow-hidden bg-slate-900 border-2 border-indigo-500/40 hover:border-indigo-400 cursor-crosshair shadow-xl group"
+                className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border-2 border-indigo-500/40 hover:border-indigo-400 cursor-crosshair shadow-xl group"
               >
                 <img src={imageDataUrl} alt="Preview" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-transparent transition-colors flex items-end p-1.5 pointer-events-none">
-                  <span className="text-[9px] font-bold bg-slate-950/80 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30 backdrop-blur-xs flex items-center gap-1">
-                    <Target className="w-2.5 h-2.5" />
+                <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-transparent transition-colors flex items-end p-2 pointer-events-none">
+                  <span className="text-xs font-bold bg-slate-950/80 text-indigo-300 px-2 py-1 rounded-lg border border-indigo-500/30 backdrop-blur-xs flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5" />
                     画像内の対象をタップ
                   </span>
                 </div>
@@ -172,8 +172,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
                     className="absolute z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
                     style={{ left: `${focusPin.x}%`, top: `${focusPin.y}%` }}
                   >
-                    <div className="w-7 h-7 rounded-full border-2 border-emerald-400 bg-emerald-500/30 flex items-center justify-center animate-pulse shadow-lg">
-                      <Target className="w-4 h-4 text-emerald-300" />
+                    <div className="w-9 h-9 rounded-full border-2 border-emerald-400 bg-emerald-500/30 flex items-center justify-center animate-pulse shadow-lg">
+                      <Target className="w-5 h-5 text-emerald-300" />
                     </div>
                   </div>
                 )}
@@ -183,9 +183,9 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
                 <button
                   onClick={() => onReAnalyzeWithFocus(imageDataUrl, focusPin)}
                   disabled={isAnalyzing}
-                  className="w-full px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-[11px] rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                  className="w-full px-2.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
                   📍 タップ位置でAI指定命名
                 </button>
               )}

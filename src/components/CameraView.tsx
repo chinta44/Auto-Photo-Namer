@@ -116,11 +116,36 @@ export const CameraView: React.FC<CameraViewProps> = ({
           facingMode: facingMode,
           width: { ideal: 3840 },
           height: { ideal: 2160 },
+          // @ts-ignore — focusMode is supported by some Chromium-based
+          // browsers (incl. Android) even though it's not in the
+          // standard TS lib.dom types yet.
+          focusMode: 'continuous',
         },
         audio: false,
       });
 
       if (stream) {
+        // Some WebViews (notably Android's System WebView used by the
+        // Capacitor app) largely ignore "ideal" width/height hints in the
+        // initial getUserMedia() call and hand back a low default
+        // resolution (e.g. 480x640) regardless. As a second pass, ask the
+        // track what it's actually capable of and explicitly request its
+        // reported maximum — this is respected much more reliably.
+        const [videoTrack] = stream.getVideoTracks();
+        if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
+          try {
+            const caps = videoTrack.getCapabilities();
+            if (caps.width?.max && caps.height?.max) {
+              await videoTrack.applyConstraints({
+                width: { ideal: caps.width.max },
+                height: { ideal: caps.height.max },
+              });
+            }
+          } catch (capErr) {
+            console.warn('Could not apply max-resolution constraints:', capErr);
+          }
+        }
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           try {
@@ -128,6 +153,11 @@ export const CameraView: React.FC<CameraViewProps> = ({
           } catch (playErr) {
             console.warn("Autoplay was prevented or failed:", playErr);
           }
+          videoRef.current.addEventListener('loadedmetadata', () => {
+            console.log(
+              `[SmartName][Camera] Actual video resolution: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`
+            );
+          }, { once: true });
         }
         setHasCameraAccess(true);
       }
