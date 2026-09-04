@@ -20,7 +20,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
-import { convertToJpegBase64 } from '../utils/imageUtils';
+import { convertToJpegBase64, createAnalysisResizedCopy } from '../utils/imageUtils';
 import { apiUrl } from '../utils/apiConfig';
 
 interface BatchAnalysisModalProps {
@@ -81,6 +81,7 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
 
       try {
         const converted = await convertToJpegBase64(item.dataUrl);
+        const forAnalysis = await createAnalysisResizedCopy(converted.fullDataUrl);
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (userApiKey) {
           headers['x-gemini-api-key'] = userApiKey;
@@ -90,8 +91,8 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
           method: 'POST',
           headers,
           body: JSON.stringify({
-            imageBase64: converted.base64Data,
-            mimeType: converted.mimeType,
+            imageBase64: forAnalysis.base64Data,
+            mimeType: forAnalysis.mimeType,
             petProfiles,
             namingConfig,
             focusPoint: item.focusPoint,

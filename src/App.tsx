@@ -17,7 +17,7 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { DataBackupModal } from './components/DataBackupModal';
 import { ThemeSettingsModal, ThemeId } from './components/ThemeSettingsModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
-import { convertToJpegBase64 } from './utils/imageUtils';
+import { convertToJpegBase64, createAnalysisResizedCopy } from './utils/imageUtils';
 import { apiUrl } from './utils/apiConfig';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { Sparkles, Camera, Key } from 'lucide-react';
@@ -152,7 +152,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         const payload: BackupDataPayload = {
-          version: '1.6.5',
+          version: '1.6.6',
           timestamp: new Date().toISOString(),
           petProfiles,
           savedPhotos,
@@ -270,6 +270,10 @@ export default function App() {
       const converted = await convertToJpegBase64(dataUrl);
       setCurrentImageDataUrl(converted.fullDataUrl);
 
+      // Send a downscaled copy to Gemini for speed; the full-resolution
+      // photo (converted.fullDataUrl, set above) is still what gets saved.
+      const forAnalysis = await createAnalysisResizedCopy(converted.fullDataUrl);
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (userApiKey) {
         headers['x-gemini-api-key'] = userApiKey;
@@ -279,8 +283,8 @@ export default function App() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          imageBase64: converted.base64Data,
-          mimeType: converted.mimeType,
+          imageBase64: forAnalysis.base64Data,
+          mimeType: forAnalysis.mimeType,
           petProfiles,
           namingConfig,
           focusPoint,
@@ -506,7 +510,7 @@ export default function App() {
       <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.5 — Gemini Vision (Google Drive自動バックアップ機能搭載)
+          いちいち面倒なカメラアプリ v1.6.6 — Gemini Vision (Google Drive自動バックアップ機能搭載)
         </p>
       </footer>
     </div>
