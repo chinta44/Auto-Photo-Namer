@@ -423,12 +423,12 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-              v1.6.5
+              v1.6.7
             </span>
             <span>いちいち面倒なカメラアプリ (Build 2026.08.01)</span>
           </div>
           <div className="text-slate-400 text-[10px]">
-            最新アップデート: Q＆Aコンテンツの大幅充実・カテゴリ検索機能追加 & バージョンv1.6.5更新
+            最新アップデート: Q＆Aコンテンツの大幅充実・カテゴリ検索機能追加 & バージョンv1.6.7更新
           </div>
         </div>
       </div>

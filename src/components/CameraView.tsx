@@ -13,6 +13,9 @@ import {
   Layers,
   X,
   Trash2,
+  Zap,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { FocusPoint, LocationData, BatchPhotoItem } from '../types';
 import { getCurrentLocationData } from '../utils/locationService';
@@ -44,6 +47,13 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [flashEffect, setFlashEffect] = useState(false);
+
+  // Torch (flash) and zoom — only shown when the active camera track reports support
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [zoomCaps, setZoomCaps] = useState<{ min: number; max: number; step: number } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // Mode: 'single' (1枚ずつすぐ命名) or 'multi' (複数枚撮ってから一括命名)
   const [shootMode, setShootMode] = useState<'single' | 'multi'>('single');
@@ -132,18 +142,37 @@ export const CameraView: React.FC<CameraViewProps> = ({
         // track what it's actually capable of and explicitly request its
         // reported maximum — this is respected much more reliably.
         const [videoTrack] = stream.getVideoTracks();
+        videoTrackRef.current = videoTrack || null;
         if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
           try {
-            const caps = videoTrack.getCapabilities();
+            const caps: any = videoTrack.getCapabilities();
             if (caps.width?.max && caps.height?.max) {
               await videoTrack.applyConstraints({
                 width: { ideal: caps.width.max },
                 height: { ideal: caps.height.max },
               });
             }
+
+            // Flash (torch) support detection — typically only the rear
+            // camera on Android Chrome/WebView reports this.
+            setTorchSupported(!!caps.torch);
+            setTorchOn(false);
+
+            // Zoom support detection
+            if (caps.zoom) {
+              setZoomCaps({ min: caps.zoom.min ?? 1, max: caps.zoom.max ?? 1, step: caps.zoom.step ?? 0.1 });
+              setZoomLevel(caps.zoom.min ?? 1);
+            } else {
+              setZoomCaps(null);
+            }
           } catch (capErr) {
-            console.warn('Could not apply max-resolution constraints:', capErr);
+            console.warn('Could not apply camera constraints:', capErr);
+            setTorchSupported(false);
+            setZoomCaps(null);
           }
+        } else {
+          setTorchSupported(false);
+          setZoomCaps(null);
         }
 
         if (videoRef.current) {
@@ -183,8 +212,35 @@ export const CameraView: React.FC<CameraViewProps> = ({
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
       }
+      videoTrackRef.current = null;
+      setTorchSupported(false);
+      setTorchOn(false);
+      setZoomCaps(null);
     };
   }, [facingMode]);
+
+  const toggleTorch = async () => {
+    const track = videoTrackRef.current;
+    if (!track || !torchSupported) return;
+    try {
+      const next = !torchOn;
+      await track.applyConstraints({ advanced: [{ torch: next } as any] });
+      setTorchOn(next);
+    } catch (err) {
+      console.warn('Failed to toggle torch:', err);
+    }
+  };
+
+  const handleZoomChange = async (value: number) => {
+    const track = videoTrackRef.current;
+    if (!track || !zoomCaps) return;
+    setZoomLevel(value);
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: value } as any] });
+    } catch (err) {
+      console.warn('Failed to apply zoom:', err);
+    }
+  };
 
   const [selectedFocusPoint, setSelectedFocusPoint] = useState<FocusPoint | null>(null);
 
@@ -347,7 +403,23 @@ export const CameraView: React.FC<CameraViewProps> = ({
           }`}
         >
           {/* Top Overlay Bar */}
-          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-end pointer-events-auto">
+          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-end gap-2 pointer-events-auto">
+            {/* Flash (Torch) Toggle Button — only shown when the camera reports support */}
+            {hasCameraAccess && torchSupported && (
+              <button
+                onClick={toggleTorch}
+                title={torchOn ? 'フラッシュをオフにする' : 'フラッシュをオンにする'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold backdrop-blur-xl border shadow-xl transition-all ${
+                  torchOn
+                    ? 'bg-amber-400/90 border-amber-300 text-slate-900 hover:bg-amber-300'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Zap className={`w-3.5 h-3.5 ${torchOn ? 'fill-slate-900' : ''}`} />
+                <span className="hidden sm:inline">{torchOn ? 'フラッシュON' : 'フラッシュ'}</span>
+              </button>
+            )}
+
             {/* GPS Location Toggle Button */}
             <button
               onClick={() => setIsLocationEnabled(!isLocationEnabled)}
@@ -520,6 +592,26 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Zoom Slider — only shown when the camera reports zoom support */}
+          {hasCameraAccess && zoomCaps && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 w-48 sm:w-64 flex items-center gap-2 bg-slate-950/80 backdrop-blur-xl border border-slate-800 rounded-full px-4 py-2 shadow-xl pointer-events-auto">
+              <ZoomOut className="w-4 h-4 text-slate-400 shrink-0" />
+              <input
+                type="range"
+                min={zoomCaps.min}
+                max={zoomCaps.max}
+                step={zoomCaps.step}
+                value={zoomLevel}
+                onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                className="flex-1 accent-indigo-500"
+              />
+              <ZoomIn className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-300 w-9 text-right shrink-0">
+                {zoomLevel.toFixed(1)}x
+              </span>
             </div>
           )}
 

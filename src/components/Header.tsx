@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
                 いちいち面倒な<span className="text-cyan-400">カメラアプリ</span>
               </h1>
               <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px] font-mono font-bold rounded-md">
-                v1.6.5
+                v1.6.7
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
