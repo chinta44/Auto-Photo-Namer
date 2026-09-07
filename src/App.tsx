@@ -39,6 +39,7 @@ const DEFAULT_NAMING_CONFIG: NamingRuleConfig = {
   separator: '_',
   customPrefix: '',
   extension: '.jpg',
+  photoQuality: 'high',
 };
 
 export default function App() {
@@ -66,7 +67,7 @@ export default function App() {
   const [namingConfig, setNamingConfig] = useState<NamingRuleConfig>(() => {
     try {
       const saved = localStorage.getItem('auto_photo_naming_config');
-      return saved ? JSON.parse(saved) : DEFAULT_NAMING_CONFIG;
+      return saved ? { ...DEFAULT_NAMING_CONFIG, ...JSON.parse(saved) } : DEFAULT_NAMING_CONFIG;
     } catch (e) {
       return DEFAULT_NAMING_CONFIG;
     }
@@ -152,7 +153,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         const payload: BackupDataPayload = {
-          version: '1.6.7',
+          version: '1.6.8',
           timestamp: new Date().toISOString(),
           petProfiles,
           savedPhotos,
@@ -411,6 +412,7 @@ export default function App() {
               setActiveTab={setActiveTab}
               savedCount={savedPhotos.length}
               petCount={petProfiles.length}
+              photoQuality={namingConfig.photoQuality}
             />
           </div>
         )}
@@ -510,7 +512,7 @@ export default function App() {
       <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.7 — Gemini Vision (Google Drive自動バックアップ機能搭載)
+          いちいち面倒なカメラアプリ v1.6.8 — Gemini Vision (Google Drive自動バックアップ機能搭載)
         </p>
       </footer>
     </div>
