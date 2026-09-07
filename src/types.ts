@@ -75,6 +75,8 @@ export interface BatchPhotoItem {
   isDownloaded?: boolean;
 }
 
+export type PhotoQuality = 'high' | 'medium' | 'low';
+
 export interface NamingRuleConfig {
   dateFormat: 'YYYYMMDD' | 'YYYY-MM-DD' | 'None';
   includeCategory: boolean;
@@ -82,4 +84,5 @@ export interface NamingRuleConfig {
   separator: '_' | '-' | ' ';
   customPrefix: string;
   extension: string;
+  photoQuality: PhotoQuality;
 }

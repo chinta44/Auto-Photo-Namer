@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NamingRuleConfig } from '../types';
-import { Settings, FileCode, Folder, FolderCheck, RotateCcw, FolderPlus, Download, CheckCircle2 } from 'lucide-react';
+import { NamingRuleConfig, PhotoQuality } from '../types';
+import { Settings, FileCode, Folder, FolderCheck, RotateCcw, FolderPlus, Download, CheckCircle2, Camera } from 'lucide-react';
 import {
   getSavedDirectoryInfo,
   pickCustomSaveDirectory,
@@ -124,6 +124,38 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
               <span>{saveStatusMsg}</span>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl text-slate-100">
+        <h3 className="font-bold text-sm text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+          <Camera className="w-4 h-4 text-indigo-400" />
+          撮影画質の設定
+        </h3>
+        <p className="text-xs text-slate-400 -mt-2">
+          写真の保存画質を選べます。画質を上げるほど、より高精細な写真になりますが、ファイルサイズは大きくなります。
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              { value: 'high', label: '高画質', desc: '最大解像度' },
+              { value: 'medium', label: '標準', desc: '約200万画素' },
+              { value: 'low', label: '省容量', desc: '約90万画素' },
+            ] as { value: PhotoQuality; label: string; desc: string }[]
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => handleChange('photoQuality', opt.value)}
+              className={`p-3 rounded-2xl border text-center transition-all ${
+                config.photoQuality === opt.value
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+              }`}
+            >
+              <div className="font-bold text-xs">{opt.label}</div>
+              <div className="text-[10px] mt-0.5 opacity-80">{opt.desc}</div>
+            </button>
+          ))}
         </div>
       </div>
 

@@ -17,7 +17,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { FocusPoint, LocationData, BatchPhotoItem } from '../types';
+import { FocusPoint, LocationData, BatchPhotoItem, PhotoQuality } from '../types';
 import { getCurrentLocationData } from '../utils/locationService';
 
 interface CameraViewProps {
@@ -28,6 +28,7 @@ interface CameraViewProps {
   setActiveTab?: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
   savedCount?: number;
   petCount?: number;
+  photoQuality?: PhotoQuality;
 }
 
 export const CameraView: React.FC<CameraViewProps> = ({
@@ -38,6 +39,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   setActiveTab,
   savedCount = 0,
   petCount = 0,
+  photoQuality = 'high',
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -117,15 +119,26 @@ export const CameraView: React.FC<CameraViewProps> = ({
         throw new Error("カメラ機能がこのブラウザまたは通信環境でサポートされていません。");
       }
 
-      // Request the highest resolution the device's camera can provide.
-      // Without explicit width/height constraints, browsers (especially
-      // Android WebView) tend to default to a conservative low resolution
-      // (e.g. 640x480) rather than the camera's actual capability.
+      // Target resolution depends on the user's chosen photo quality setting.
+      // 'high' asks for the highest the camera can do (negotiated further
+      // below via getCapabilities); 'medium'/'low' cap it to keep file
+      // sizes and processing time down.
+      const QUALITY_TARGETS: Record<PhotoQuality, { width: number; height: number }> = {
+        high: { width: 3840, height: 2160 },
+        medium: { width: 1920, height: 1080 },
+        low: { width: 1280, height: 720 },
+      };
+      const target = QUALITY_TARGETS[photoQuality] || QUALITY_TARGETS.high;
+
+      // Request the resolution matching the chosen quality level. Without
+      // explicit width/height constraints, browsers (especially Android
+      // WebView) tend to default to a conservative low resolution (e.g.
+      // 640x480) rather than the camera's actual capability.
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
-          width: { ideal: 3840 },
-          height: { ideal: 2160 },
+          width: { ideal: target.width },
+          height: { ideal: target.height },
           // @ts-ignore — focusMode is supported by some Chromium-based
           // browsers (incl. Android) even though it's not in the
           // standard TS lib.dom types yet.
@@ -139,17 +152,25 @@ export const CameraView: React.FC<CameraViewProps> = ({
         // Capacitor app) largely ignore "ideal" width/height hints in the
         // initial getUserMedia() call and hand back a low default
         // resolution (e.g. 480x640) regardless. As a second pass, ask the
-        // track what it's actually capable of and explicitly request its
-        // reported maximum — this is respected much more reliably.
+        // track what it's actually capable of and explicitly re-request —
+        // for "high" quality we ask for the camera's true max; for
+        // medium/low we re-assert our capped target so it's respected.
         const [videoTrack] = stream.getVideoTracks();
         videoTrackRef.current = videoTrack || null;
         if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
           try {
             const caps: any = videoTrack.getCapabilities();
-            if (caps.width?.max && caps.height?.max) {
+            if (photoQuality === 'high') {
+              if (caps.width?.max && caps.height?.max) {
+                await videoTrack.applyConstraints({
+                  width: { ideal: caps.width.max },
+                  height: { ideal: caps.height.max },
+                });
+              }
+            } else {
               await videoTrack.applyConstraints({
-                width: { ideal: caps.width.max },
-                height: { ideal: caps.height.max },
+                width: { ideal: target.width },
+                height: { ideal: target.height },
               });
             }
 
@@ -217,7 +238,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
       setTorchOn(false);
       setZoomCaps(null);
     };
-  }, [facingMode]);
+  }, [facingMode, photoQuality]);
 
   const toggleTorch = async () => {
     const track = videoTrackRef.current;
