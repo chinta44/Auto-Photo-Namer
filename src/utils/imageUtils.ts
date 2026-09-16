@@ -8,7 +8,7 @@
  */
 export async function createAnalysisResizedCopy(
   fullDataUrl: string,
-  maxDimension: number = 1600
+  maxDimension: number = 1024
 ): Promise<{ base64Data: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();

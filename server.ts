@@ -130,6 +130,9 @@ app.post("/api/analyze-photo", async (req, res) => {
 JSONフォーマットで回答してください。`;
 
     let response;
+    const PRIMARY_TIMEOUT_MS = 12000; // if gemini-3.6-flash hasn't responded in 12s, fall back sooner instead of waiting indefinitely
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PRIMARY_TIMEOUT_MS);
     try {
       response = await ai.models.generateContent({
         model: "gemini-3.6-flash",
@@ -145,6 +148,7 @@ JSONフォーマットで回答してください。`;
           },
         ],
         config: {
+          abortSignal: controller.signal,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -217,8 +221,10 @@ JSONフォーマットで回答してください。`;
           },
         },
       });
+      clearTimeout(timeoutId);
     } catch (primaryErr: any) {
-      console.warn("Primary model gemini-3.6-flash failed, trying gemini-flash-latest fallback...", primaryErr.message);
+      clearTimeout(timeoutId);
+      console.warn("Primary model gemini-3.6-flash failed or timed out, trying gemini-flash-latest fallback...", primaryErr.message);
       response = await ai.models.generateContent({
         model: "gemini-flash-latest",
         contents: [
