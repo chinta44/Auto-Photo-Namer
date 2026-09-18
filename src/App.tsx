@@ -20,7 +20,8 @@ import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, B
 import { convertToJpegBase64, createAnalysisResizedCopy } from './utils/imageUtils';
 import { apiUrl } from './utils/apiConfig';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
-import { Sparkles, Camera, Key } from 'lucide-react';
+import { checkForAppUpdate, CURRENT_APP_VERSION, UpdateInfo } from './utils/updateChecker';
+import { Sparkles, Camera, Key, Download, X } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
   {
@@ -94,6 +95,15 @@ export default function App() {
   });
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
 
+  // Check GitHub Releases for a newer APK version (native app only)
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false);
+  useEffect(() => {
+    checkForAppUpdate().then((info) => {
+      if (info.available) setUpdateInfo(info);
+    });
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
@@ -153,7 +163,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         const payload: BackupDataPayload = {
-          version: '1.6.9',
+          version: '1.7.0',
           timestamp: new Date().toISOString(),
           petProfiles,
           savedPhotos,
@@ -377,6 +387,42 @@ export default function App() {
           </div>
         )}
 
+        {/* App Update Available Banner (native Android app only) */}
+        {updateInfo?.available && !updateBannerDismissed && (
+          <div className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-950 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Download className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">
+                  新しいバージョン (v{updateInfo.latestVersion}) が利用可能です
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  現在: v{CURRENT_APP_VERSION} → 最新版をダウンロードして更新できます
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <a
+                href={updateInfo.downloadUrl}
+                target="_system"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-none text-center px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                ダウンロード
+              </a>
+              <button
+                onClick={() => setUpdateBannerDismissed(true)}
+                className="p-2 text-slate-500 hover:text-white transition"
+                title="閉じる"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* API Key Recommendation Banner if not set */}
         {!userApiKey && (
           <div className="p-3.5 sm:p-4 bg-gradient-to-r from-indigo-950/70 via-slate-900 to-slate-950 border border-indigo-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
@@ -512,7 +558,7 @@ export default function App() {
       <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.6.9 — Gemini Vision (Google Drive自動バックアップ機能搭載)
+          いちいち面倒なカメラアプリ v1.7.0 — Gemini Vision (Google Drive自動バックアップ機能搭載)
         </p>
       </footer>
     </div>

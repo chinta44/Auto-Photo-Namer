@@ -105,7 +105,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
       const now = new Date();
       const dateStr = getJSTDateString();
       const payload: BackupDataPayload = {
-        version: '1.6.9',
+        version: '1.7.0',
         timestamp: now.toISOString(),
         petProfiles,
         savedPhotos,
