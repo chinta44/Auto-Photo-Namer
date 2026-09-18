@@ -1,0 +1,8 @@
+{
+	"appId": "com.chinta44.autophotonamer",
+	"appName": "いちいち面倒なカメラアプリ",
+	"webDir": "dist",
+	"android": {
+		"allowMixedContent": false
+	}
+}
