@@ -17,11 +17,12 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { DataBackupModal } from './components/DataBackupModal';
 import { ThemeSettingsModal, ThemeId } from './components/ThemeSettingsModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
-import { convertToJpegBase64, createAnalysisResizedCopy } from './utils/imageUtils';
+import { convertToJpegBase64, createAnalysisResizedCopy, createGalleryCopy } from './utils/imageUtils';
 import { apiUrl } from './utils/apiConfig';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { checkForAppUpdate, CURRENT_APP_VERSION, UpdateInfo } from './utils/updateChecker';
-import { Sparkles, Camera, Key, Download, X } from 'lucide-react';
+import { APP_VERSION } from './version';
+import { Sparkles, Camera, Key, Download, X, AlertTriangle } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
   {
@@ -163,7 +164,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         const payload: BackupDataPayload = {
-          version: '1.7.0',
+          version: APP_VERSION,
           timestamp: new Date().toISOString(),
           petProfiles,
           savedPhotos,
@@ -237,10 +238,18 @@ export default function App() {
     } catch (e) {}
   }, [petProfiles]);
 
+  // Warning shown when the gallery can't be written to storage (quota exceeded).
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+
   useEffect(() => {
     try {
       localStorage.setItem('auto_photo_saved_library', JSON.stringify(savedPhotos));
-    } catch (e) {}
+      setStorageWarning(null);
+    } catch (e) {
+      setStorageWarning(
+        '端末の保存容量がいっぱいのため、ギャラリーの最新の変更を保存できませんでした。このままアプリを閉じると、新しく保存した写真が消える可能性があります。不要な写真を削除するか、ヘッダーの「データバックアップ＆復元」からバックアップを書き出してください。'
+      );
+    }
   }, [savedPhotos]);
 
   useEffect(() => {
@@ -333,14 +342,21 @@ export default function App() {
     setIsBatchModalOpen(true);
   };
 
-  const handleSaveToGallery = (photo: SavedPhoto) => {
-    setSavedPhotos((prev) => [photo, ...prev]);
+  // The gallery keeps a downsized copy (see createGalleryCopy) so it fits in localStorage.
+  const handleSaveToGallery = async (photo: SavedPhoto) => {
+    const dataUrl = await createGalleryCopy(photo.dataUrl);
+    setSavedPhotos((prev) => [{ ...photo, dataUrl }, ...prev]);
   };
 
-  const handleSaveMultipleToGallery = (photos: SavedPhoto[]) => {
+  const handleSaveMultipleToGallery = async (photos: SavedPhoto[]) => {
+    const shrunk: SavedPhoto[] = [];
+    for (const photo of photos) {
+      // One at a time to keep peak memory low on phones.
+      shrunk.push({ ...photo, dataUrl: await createGalleryCopy(photo.dataUrl) });
+    }
     setSavedPhotos((prev) => {
       const existingIds = new Set(prev.map((p) => p.id));
-      const newUnique = photos.filter((p) => !existingIds.has(p.id));
+      const newUnique = shrunk.filter((p) => !existingIds.has(p.id));
       return [...newUnique, ...prev];
     });
   };
@@ -420,6 +436,28 @@ export default function App() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Gallery storage full warning */}
+        {storageWarning && (
+          <div className="p-3.5 sm:p-4 bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-950 border border-amber-500/40 rounded-2xl flex items-start justify-between gap-3 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">ギャラリーの保存容量がいっぱいです</p>
+                <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{storageWarning}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setStorageWarning(null)}
+              className="p-2 text-slate-500 hover:text-white transition shrink-0"
+              title="閉じる"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -558,7 +596,7 @@ export default function App() {
       <footer className="py-6 pb-24 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md text-center text-xs text-slate-500 font-medium">
         <p className="max-w-md mx-auto px-4 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          いちいち面倒なカメラアプリ v1.7.0 — Gemini Vision (Google Drive自動バックアップ機能搭載)
+          いちいち面倒なカメラアプリ v{APP_VERSION} — Gemini Vision (端末バックアップ対応)
         </p>
       </footer>
     </div>

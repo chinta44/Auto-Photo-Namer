@@ -139,3 +139,70 @@ export async function convertToJpegBase64(dataUrl: string): Promise<{ base64Data
     img.src = dataUrl;
   });
 }
+
+/**
+ * Creates a smaller JPEG copy of a photo for the in-app gallery.
+ *
+ * The gallery is persisted in localStorage (roughly 5MB per origin), so keeping
+ * full camera-resolution photos there fills the quota after only a few photos.
+ * The full-resolution photo is still what the "download" button on the analysis
+ * screen saves; this copy is only what the gallery keeps.
+ *
+ * Never rejects: on any problem (decode error, timeout, canvas failure) or if the
+ * result would not be smaller, the original data URL is returned unchanged.
+ */
+export function createGalleryCopy(
+  dataUrl: string,
+  maxDimension: number = 1280,
+  quality: number = 0.72,
+  skipBelowChars: number = 200000
+): Promise<string> {
+  // Already small (this also covers the built-in SVG sample photos) - keep as is.
+  if (dataUrl.length <= skipBelowChars) return Promise.resolve(dataUrl);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: string) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(dataUrl), 10000);
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const srcW = img.naturalWidth || img.width;
+        const srcH = img.naturalHeight || img.height;
+        if (!srcW || !srcH) {
+          finish(dataUrl);
+          return;
+        }
+        const scale = Math.min(1, maxDimension / Math.max(srcW, srcH));
+        const width = Math.max(1, Math.round(srcW * scale));
+        const height = Math.max(1, Math.round(srcH * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          finish(dataUrl);
+          return;
+        }
+        // White background so transparent PNGs don't turn black as JPEG.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const out = canvas.toDataURL('image/jpeg', quality);
+        finish(out.startsWith('data:image/jpeg') && out.length < dataUrl.length ? out : dataUrl);
+      } catch {
+        finish(dataUrl);
+      }
+    };
+    img.onerror = () => finish(dataUrl);
+    img.src = dataUrl;
+  });
+}

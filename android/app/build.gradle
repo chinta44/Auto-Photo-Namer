@@ -7,8 +7,10 @@ android {
         applicationId "com.chinta44.autophotonamer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Keep in sync with src/version.ts (APP_VERSION).
+        // versionCode = major*10000 + minor*100 + patch  (1.7.1 -> 10701)
+        versionCode 10701
+        versionName "1.7.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

@@ -1,8 +1,8 @@
 import { Capacitor } from '@capacitor/core';
+import { APP_VERSION } from '../version';
 
-// Keep this in sync with the version string shown in Header.tsx / index.html
-// whenever you bump the app version.
-export const CURRENT_APP_VERSION = '1.7.0';
+// Single source of truth is src/version.ts - bump the version there.
+export const CURRENT_APP_VERSION = APP_VERSION;
 
 const GITHUB_REPO = 'chinta44/Auto-Photo-Namer';
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APP_VERSION } from '../version';
 import { 
   HelpCircle, 
   CheckCircle, 
@@ -82,8 +83,8 @@ const FAQ_LIST: FAQItem[] = [
     id: 'faq-7',
     category: 'backup',
     question: 'スマホの買い替えやブラウザのキャッシュ消去でデータは消えますか？',
-    answer: 'Google Drive自動バックアップ機能をONにしておくか、「データ復元＆バックアップ」からエクスポートしておけば安心です。ご自身のGoogle Driveに写真ギャラリー・ペット情報・命名設定が同期され、新端末でもワンクリックで完全復元できます。',
-    badge: 'Google Drive同期'
+    answer: 'データはお使いの端末内に保存されるため、機種変更やアプリのデータ消去で消えることがあります。ヘッダーの「データバックアップ＆復元」からJSONファイルを書き出して保管しておけば安心です。新しい端末でも同じ画面でファイルを読み込むだけで、写真ギャラリー・ペット情報・命名設定を復元できます（「上書き」または「合成」を選べます）。',
+    badge: '端末バックアップ'
   },
   {
     id: 'faq-8',
@@ -103,8 +104,15 @@ const FAQ_LIST: FAQItem[] = [
     id: 'faq-10',
     category: 'privacy',
     question: '写真やプライベートなデータが外部に送信・保存されますか？',
-    answer: '当アプリの外部サーバーには一切写真や個人データは送信・保存されません。すべての画像および設定データはお手元のスマートフォン内（IndexedDB / LocalStorage）および接続したお客様ご自身のGoogle Driveのみに格納されます。',
-    badge: 'プライバシー安心'
+    answer: '写真はAI解析のときだけ、当アプリのサーバー（Render）を経由してGoogleのGemini APIに送信されます。サーバー側では写真を保存しません。ギャラリー・ペット情報・命名設定などの保存データはお手元の端末内（LocalStorage）に置かれ、バックアップファイルを書き出さない限り外部には送られません。なお、Gemini側でのデータの取り扱いはGoogleの利用規約に従います。',
+    badge: 'プライバシー'
+  },
+  {
+    id: 'faq-11',
+    category: 'backup',
+    question: 'アプリのギャラリーに保存した写真は、元の画質のままですか？',
+    answer: '端末の保存容量に限りがあるため、ギャラリーには長辺1280px程度に縮小したJPEGで保存されます。元の解像度で残したい場合は、解析結果画面の「ダウンロード」ボタンで端末に保存してください。ギャラリーの容量がいっぱいになると警告が表示されるので、不要な写真を削除するか、バックアップを書き出してください。',
+    badge: 'ギャラリー保存'
   }
 ];
 
@@ -139,7 +147,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
 
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold shadow-sm">
           <CheckCircle className="w-4 h-4 text-emerald-400" />
-          最新機能搭載：Google Driveバックアップ & 一括AI解析 & 位置情報連動
+          最新機能搭載：端末バックアップ & 一括AI解析 & 位置情報連動
         </div>
 
         <h2 className="text-2xl md:text-3xl font-extrabold text-white leading-tight tracking-tight">
@@ -150,7 +158,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         </h2>
 
         <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-3xl">
-          領収書の高精度OCR・ペット個体識別・商品や思い出写真の自動分類・複数画像の一括処理・Google Drive自動バックアップまで、あらゆる機能を月額費用0円でご活用いただけます。
+          領収書の高精度OCR・ペット個体識別・商品や思い出写真の自動分類・複数画像の一括処理・JSONバックアップ/復元まで、あらゆる機能を月額費用0円でご活用いただけます。
         </p>
       </div>
 
@@ -379,7 +387,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
             <div>
               <p className="font-bold text-white text-sm">サーバー代・管理維持費も0円</p>
               <p className="text-slate-400 font-medium mt-0.5">
-                画像データや分析履歴はお手元の端末ブラウザストレージおよびお客様ご自身のGoogle Driveに直接安全保存されるため、外部の有料データサーバーが不要で0円維持が可能です。
+                ギャラリーや分析履歴はお手元の端末内ストレージに保存されるため、データ保管用の有料サーバーが不要で、0円での維持が可能です。
               </p>
             </div>
           </div>
@@ -414,8 +422,8 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
 
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
             <HardDrive className="w-5 h-5 text-indigo-400 mx-auto mb-1" />
-            <p className="font-bold text-white">④ スマホ & Drive保存</p>
-            <p className="text-[10px] text-slate-400">命名ファイルで保存・Driveへ自動同期</p>
+            <p className="font-bold text-white">④ スマホ保存 & バックアップ</p>
+            <p className="text-[10px] text-slate-400">命名ファイルで保存・JSONでバックアップ</p>
           </div>
         </div>
 
@@ -423,12 +431,12 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-              v1.7.0
+              v{APP_VERSION}
             </span>
             <span>いちいち面倒なカメラアプリ (Build 2026.08.01)</span>
           </div>
           <div className="text-slate-400 text-[10px]">
-            最新アップデート: Q＆Aコンテンツの大幅充実・カテゴリ検索機能追加 & バージョンv1.7.0更新
+            最新アップデート: Google Driveバックアップを一時停止し端末バックアップに一本化・ギャラリー保存の容量対策 & バージョンv{APP_VERSION}更新
           </div>
         </div>
       </div>

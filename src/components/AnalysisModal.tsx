@@ -215,9 +215,9 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
                     店舗: {analysis.details.restaurantName}
                   </span>
                 )}
-                {analysis.details.dishName && (
+                {analysis.details.foodDishName && (
                   <span className="px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-300 font-medium rounded-lg">
-                    料理: {analysis.details.dishName}
+                    料理: {analysis.details.foodDishName}
                   </span>
                 )}
                 {analysis.details.receiptStore && (

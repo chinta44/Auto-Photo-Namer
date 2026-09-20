@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { APP_VERSION } from '../version';
 import { getJSTDateString } from '../utils/dateUtils';
 import { saveOrShareFile } from '../utils/nativeFileSave';
 import { User } from 'firebase/auth';
@@ -105,7 +106,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
       const now = new Date();
       const dateStr = getJSTDateString();
       const payload: BackupDataPayload = {
-        version: '1.7.0',
+        version: APP_VERSION,
         timestamp: now.toISOString(),
         petProfiles,
         savedPhotos,
@@ -225,7 +226,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
     setIsDriveProcessing(true);
     try {
       const payload: BackupDataPayload = {
-        version: '1.6.1',
+        version: APP_VERSION,
         timestamp: new Date().toISOString(),
         petProfiles,
         savedPhotos,
@@ -419,7 +420,13 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 2: Google Drive Auto Cloud Backup (Advanced Option) */}
+          {/* SECTION 2: Google Drive Auto Cloud Backup (Advanced Option)
+              — Hidden: the AI Studio-managed Firebase project only grants the
+              developer account viewer permissions, so "Authorized domains"
+              can't be configured and Drive sign-in always fails. Local JSON
+              backup/restore (SECTION 1 above) is used instead. Re-enable by
+              un-commenting this block if Firebase access is ever fixed. */}
+          {false && (
           <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
             <button
               onClick={() => setShowDriveSection(!showDriveSection)}
@@ -483,6 +490,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Modal Footer */}

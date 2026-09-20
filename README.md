@@ -17,7 +17,8 @@
 ### 🐶 ペットの個体識別・名前学習
 名前と特徴（毛色・種類など）を一度登録すると、次回以降の撮影でAIが同じ個体を自動認識して命名します。
 - 端末やブラウザをまたいで使う場合は、学習データをJSONファイルでバックアップ/復元でき、**「上書き」と「合成（既存データに追加）」**のどちらかを選べます（同一IDは既存を優先）。
-- Googleアカウント連携で、Google Driveへの自動バックアップにも対応。
+- Google Driveへの自動バックアップ機能はコード上は残していますが、現在は画面から非表示にしています（Firebase側で承認済みドメインを設定できず、ログインできないため）。バックアップはJSONの書き出し/復元をご利用ください。
+- アプリ内ギャラリーへの保存は、端末の保存容量（LocalStorage）を考慮して、写真を長辺1280px程度のJPEGに縮小して保存します。元の解像度で残したい場合は、解析結果画面の「ダウンロード」ボタンで端末に保存してください。
 
 ### 👟📄🍜 商品・書類・食品の自動カテゴリ判定
 商品ブランドや料理名、書類の種別を判定し、汎用カテゴリ名でも安全に命名します。
@@ -48,7 +49,7 @@ Capacitorを使ってAndroidアプリ化しており、APKとして端末にイ�
 - **バックエンド**: Node.js / Express（`server.ts`、Gemini APIへのプロキシ）
 - **AIエンジン**: Google Gen AI SDK (`@google/genai`) — Gemini 3.6 Flash Vision
 - **Androidアプリ化**: Capacitor（`@capacitor/android`, `@capacitor/filesystem`, `@capacitor/share`）
-- **外部連携**: Google Drive API（学習データの自動バックアップ）
+- **外部連携**: Google Drive API（自動バックアップ。現在はUI非表示・一時停止中）
 
 ---
 
@@ -109,6 +110,17 @@ npx cap sync android    # android/ プロジェクトに同期
 
 ⚠️ **コードを更新した場合は、必ず上記のビルド手順を最初からやり直してください。** GitHub上のコードを更新しただけではAndroid側には反映されません。また、PC側の作業フォルダは都度GitHubから「Download ZIP」し直すことを推奨します（古いフォルダのまま作業すると更新が反映されない原因になります）。
 
+### 🔖 バージョンを上げるとき
+
+リリースのたびに、次の2か所だけを書き換えます。
+
+1. `src/version.ts` の `APP_VERSION`（画面の版数表示・バックアップファイル・更新通知の判定に使われます）
+2. `android/app/build.gradle` の `versionName`（同じ版数）と `versionCode`（`メジャー×10000 + マイナー×100 + パッチ`。例: 1.7.1 → `10701`）
+
+そのうえで上記のビルド手順を実行し、GitHub Releases に同じ版数のタグ（例: `v1.7.1`）でAPKを添付して公開すると、古い版のアプリに更新通知が出ます（リポジトリがPublicの場合。認証なしのGitHub APIで読めるため）。
+
+> `android/app/src/main/assets/public/` や `android/local.properties`、`android/build/` はビルド時に自動生成されるファイルです。GitHubにアップロードする必要はありません。
+
 ---
 
 ## 📂 プロジェクト構造
@@ -118,6 +130,7 @@ npx cap sync android    # android/ プロジェクトに同期
 │   ├── components/       # UIコンポーネント（カメラ、各種モーダル、ギャラリー等）
 │   ├── utils/             # Gemini/Drive連携、画像変換、ファイル保存などのロジック
 │   ├── types.ts           # TypeScript型定義
+│   ├── version.ts         # アプリのバージョン（更新時はここを書き換え）
 │   ├── App.tsx             # メインアプリケーションコンポーネント
 │   ├── index.css           # グローバルスタイル・テーマ定義
 │   └── main.tsx             # エントリーポイント
