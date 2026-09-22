@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getFormattedToday } from '../utils/dateUtils';
 import { AnalysisResult, PetProfile, SavedPhoto, FocusPoint } from '../types';
-import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown, Utensils } from 'lucide-react';
+import { Download, Copy, Check, Save, Sparkles, X, Dog, Receipt, Package, FileText, HelpCircle, Edit2, Tag, Target, MapPin, RefreshCw, FolderDown, Utensils, Crop, Undo2 } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
+import { DocumentScanModal } from './DocumentScanModal';
 
 interface AnalysisModalProps {
   imageDataUrl: string;
@@ -30,6 +31,16 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  // The photo actually used for preview/save/download - starts as the original, can be
+  // replaced with a perspective-corrected version via the "文書をまっすぐ補正" tool below.
+  const [displayImageUrl, setDisplayImageUrl] = useState(imageDataUrl);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  useEffect(() => {
+    setDisplayImageUrl(imageDataUrl);
+  }, [imageDataUrl]);
+  const canStraighten = analysis.category === 'receipt' || analysis.category === 'document';
+  const isStraightened = displayImageUrl !== imageDataUrl;
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [focusPin, setFocusPin] = useState<FocusPoint | null>(null);
@@ -72,7 +83,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
   const handleDownloadImage = async () => {
     setIsDownloading(true);
     try {
-      const success = await downloadImageWithPicker(imageDataUrl, selectedFilename);
+      const success = await downloadImageWithPicker(displayImageUrl, selectedFilename);
       if (success) {
         setIsDownloaded(true);
       }
@@ -89,7 +100,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
 
     const photoRecord: SavedPhoto = {
       id: `photo-${Date.now()}`,
-      dataUrl: imageDataUrl,
+      dataUrl: displayImageUrl,
       filename: selectedFilename,
       category: analysis.category,
       analysis: {
@@ -115,7 +126,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
       species: 'dog',
       breedOrDescription: analysis.details.petBreed || '画像認識されたペット',
       registeredAt: new Date().toLocaleDateString('ja-JP'),
-      avatarUrl: imageDataUrl,
+      avatarUrl: displayImageUrl,
     };
 
     onRegisterPet(newPet);
@@ -159,7 +170,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
                 onClick={handlePreviewImageClick}
                 className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border-2 border-indigo-500/40 hover:border-indigo-400 cursor-crosshair shadow-xl group"
               >
-                <img src={imageDataUrl} alt="Preview" className="w-full h-full object-cover" />
+                <img src={displayImageUrl} alt="Preview" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-transparent transition-colors flex items-end p-2 pointer-events-none">
                   <span className="text-xs font-bold bg-slate-950/80 text-indigo-300 px-2 py-1 rounded-lg border border-indigo-500/30 backdrop-blur-xs flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5" />
@@ -181,13 +192,35 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
 
               {focusPin && onReAnalyzeWithFocus && (
                 <button
-                  onClick={() => onReAnalyzeWithFocus(imageDataUrl, focusPin)}
+                  onClick={() => onReAnalyzeWithFocus(displayImageUrl, focusPin)}
                   disabled={isAnalyzing}
                   className="w-full px-2.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                 >
                   <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
                   📍 タップ位置でAI指定命名
                 </button>
+              )}
+
+              {canStraighten && (
+                <div className="w-full flex gap-2">
+                  <button
+                    onClick={() => setIsScanModalOpen(true)}
+                    className="flex-1 px-2.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <Crop className="w-3.5 h-3.5 text-indigo-400" />
+                    文書をまっすぐ補正
+                  </button>
+                  {isStraightened && (
+                    <button
+                      onClick={() => setDisplayImageUrl(imageDataUrl)}
+                      title="補正前の写真に戻す"
+                      className="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      元に戻す
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -397,6 +430,17 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({
           </button>
         </div>
       </div>
+
+      {isScanModalOpen && (
+        <DocumentScanModal
+          imageDataUrl={displayImageUrl}
+          onCancel={() => setIsScanModalOpen(false)}
+          onApply={(straightened) => {
+            setDisplayImageUrl(straightened);
+            setIsScanModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

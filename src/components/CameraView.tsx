@@ -16,14 +16,25 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
+  Check,
 } from 'lucide-react';
 import { FocusPoint, LocationData, BatchPhotoItem, PhotoQuality } from '../types';
 import { getCurrentLocationData } from '../utils/locationService';
+import { readCapturedDate } from '../utils/exifDate';
+import { wakeServer } from '../utils/serverWake';
 
 interface CameraViewProps {
-  onCaptureImage: (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null) => void;
+  onCaptureImage: (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null, capturedDate?: string | null) => void;
   onStartBatchAnalysis: (items: BatchPhotoItem[], location?: LocationData | null) => void;
+  /** Adds photos to the background analysis queue the instant they are captured/imported (multi-shot mode). */
+  onQueuePhotos?: (items: BatchPhotoItem[], location?: LocationData | null) => void;
+  onRemoveQueuedPhoto?: (id: string) => void;
+  onClearQueuedPhotos?: () => void;
+  /** Live background-analysis status for queued photos, keyed by id (see utils/analysisQueue.ts). */
+  queueStatusById?: Map<string, BatchPhotoItem>;
   isAnalyzing: boolean;
+  /** Shown while a single-shot analysis is being retried or the server is waking up. */
+  analysisNotice?: string | null;
   activeTab?: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide';
   setActiveTab?: (tab: 'camera' | 'gallery' | 'pets' | 'rules' | 'guide') => void;
   savedCount?: number;
@@ -34,13 +45,23 @@ interface CameraViewProps {
 export const CameraView: React.FC<CameraViewProps> = ({
   onCaptureImage,
   onStartBatchAnalysis,
+  onQueuePhotos,
+  onRemoveQueuedPhoto,
+  onClearQueuedPhotos,
+  queueStatusById,
   isAnalyzing,
+  analysisNotice,
   activeTab = 'camera',
   setActiveTab,
   savedCount = 0,
   petCount = 0,
   photoQuality = 'high',
 }) => {
+  // Pings the server once when the camera screen opens so a Render free-plan cold start
+  // does not delay the very first analysis.
+  useEffect(() => {
+    wakeServer();
+  }, []);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -294,13 +315,16 @@ export const CameraView: React.FC<CameraViewProps> = ({
       if (shootMode === 'single') {
         onCaptureImage(dataUrl, selectedFocusPoint || undefined, locationData);
       } else {
-        // Multi-shot mode: append to queued list
+        // Multi-shot mode: append to the queue and start analyzing it in the background
+        // right away, so the user can keep shooting without waiting for AI results.
         const newItem: BatchPhotoItem = {
           id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           dataUrl,
           focusPoint: selectedFocusPoint || undefined,
+          location: locationData,
         };
         setQueuedPhotos((prev) => [...prev, newItem]);
+        onQueuePhotos?.([newItem], locationData);
         setSelectedFocusPoint(null); // reset focus point
       }
     }
@@ -324,11 +348,17 @@ export const CameraView: React.FC<CameraViewProps> = ({
     if (fileCount === 1) {
       const file = files[0];
       const reader = new FileReader();
+      // The photo's own date (EXIF, or its last-modified date) so gallery-imported photos are
+      // named with the day they were actually taken instead of today's date.
+      const capturedDatePromise = readCapturedDate(file);
       reader.onload = (event) => {
         console.log('[SmartName][Upload] FileReader onload, result length =', (event.target?.result as string)?.length);
         if (event.target?.result) {
           console.log('[SmartName][Upload] calling onCaptureImage...');
-          onCaptureImage(event.target.result as string, undefined, locationData);
+          const dataUrl = event.target.result as string;
+          capturedDatePromise
+            .then((capturedDate) => onCaptureImage(dataUrl, undefined, locationData, capturedDate))
+            .catch(() => onCaptureImage(dataUrl, undefined, locationData));
         }
       };
       reader.onerror = () => {
@@ -341,44 +371,48 @@ export const CameraView: React.FC<CameraViewProps> = ({
       return;
     }
 
-    // Multiple files: queue them for batch analysis (triggered via "一括AI名付け開始")
-    const newItems: BatchPhotoItem[] = [];
+    // Multiple files: queue them for batch analysis (analysis starts in the background right
+    // away; "一括AI名付け開始" just opens the results screen for what's already queued).
+    const newItems: (BatchPhotoItem | null)[] = new Array(fileCount).fill(null);
+    const capturedDatePromises: Promise<string | null>[] = [];
     let processed = 0;
     let failed = 0;
 
-    Array.from(files).forEach((file: File) => {
+    const finish = () => {
+      const ready = newItems.filter((i): i is BatchPhotoItem => i !== null);
+      setQueuedPhotos((prev) => [...prev, ...ready]);
+      onQueuePhotos?.(ready, locationData);
+      if (shootMode === 'single') {
+        setShootMode('multi');
+      }
+      if (failed > 0) {
+        window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
+      }
+    };
+
+    Array.from(files).forEach((file: File, index: number) => {
       const reader = new FileReader();
+      const capturedDatePromise = readCapturedDate(file).catch(() => null);
+      capturedDatePromises.push(capturedDatePromise);
       reader.onload = (event) => {
         if (event.target?.result) {
-          newItems.push({
-            id: `batch-upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            dataUrl: event.target.result as string,
+          const id = `batch-upload-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`;
+          const dataUrl = event.target.result as string;
+          capturedDatePromise.then((capturedDate) => {
+            newItems[index] = { id, dataUrl, location: locationData, capturedDate: capturedDate ?? undefined };
+            processed++;
+            if (processed === fileCount) finish();
           });
-        }
-        processed++;
-        if (processed === fileCount) {
-          setQueuedPhotos((prev) => [...prev, ...newItems]);
-          if (shootMode === 'single') {
-            setShootMode('multi');
-          }
-          if (failed > 0) {
-            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
-          }
+        } else {
+          processed++;
+          if (processed === fileCount) finish();
         }
       };
       reader.onerror = () => {
         console.error('Failed to read uploaded file:', file.name, reader.error);
         failed++;
         processed++;
-        if (processed === fileCount) {
-          setQueuedPhotos((prev) => [...prev, ...newItems]);
-          if (shootMode === 'single') {
-            setShootMode('multi');
-          }
-          if (failed > 0) {
-            window.alert(`${failed}枚の写真の読み込みに失敗しました。残りの写真はキューに追加されています。`);
-          }
-        }
+        if (processed === fileCount) finish();
       };
       reader.readAsDataURL(file);
     });
@@ -388,6 +422,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
   const handleRemoveQueuedPhoto = (id: string) => {
     setQueuedPhotos((prev) => prev.filter((item) => item.id !== id));
+    onRemoveQueuedPhoto?.(id);
   };
 
   const handleTriggerBatchAnalysis = () => {
@@ -565,7 +600,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
                   Gemini AI 解析中...
                 </p>
                 <p className="text-xs text-slate-400 font-medium">
-                  店舗・グルメ・領収書OCR・ペット自動命名を実施しています
+                  {analysisNotice || '店舗・グルメ・領収書OCR・ペット自動命名を実施しています'}
                 </p>
               </div>
             </div>
@@ -581,7 +616,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
                 </span>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setQueuedPhotos([])}
+                    onClick={() => {
+                      setQueuedPhotos([]);
+                      onClearQueuedPhotos?.();
+                    }}
                     className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-950/40 border border-rose-800/40"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -598,20 +636,42 @@ export const CameraView: React.FC<CameraViewProps> = ({
               </div>
 
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {queuedPhotos.map((item, index) => (
-                  <div key={item.id} className="relative group shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-500/30 bg-slate-950 shadow-md">
-                    <img src={item.dataUrl} alt={`Queued ${index}`} className="w-full h-full object-cover" />
-                    <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-slate-950/90 border border-slate-700 text-white text-[9px] font-mono font-bold flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveQueuedPhoto(item.id)}
-                      className="absolute top-0.5 right-0.5 p-0.5 bg-rose-600 text-white rounded-full opacity-90 hover:bg-rose-500 transition shadow"
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                ))}
+                {queuedPhotos.map((item, index) => {
+                  // Live background-analysis status for this item (see utils/analysisQueue.ts).
+                  const status = queueStatusById?.get(item.id)?.status;
+                  return (
+                    <div key={item.id} className="relative group shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-500/30 bg-slate-950 shadow-md">
+                      <img src={item.dataUrl} alt={`Queued ${index}`} className="w-full h-full object-cover" />
+                      <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-slate-950/90 border border-slate-700 text-white text-[9px] font-mono font-bold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                      {(status === 'analyzing' || status === 'retrying') && (
+                        <span
+                          className="absolute inset-0 bg-slate-950/50 flex items-center justify-center"
+                          title={status === 'retrying' ? 'AI解析を再試行中...' : 'AI解析中...'}
+                        >
+                          <RefreshCw className="w-4 h-4 text-indigo-300 animate-spin" />
+                        </span>
+                      )}
+                      {status === 'done' && (
+                        <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow" title="解析完了">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                      )}
+                      {status === 'error' && (
+                        <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center shadow" title="解析失敗（一覧画面から再試行できます）">
+                          !
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveQueuedPhoto(item.id)}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-rose-600 text-white rounded-full opacity-90 hover:bg-rose-500 transition shadow"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

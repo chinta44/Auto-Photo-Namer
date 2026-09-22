@@ -436,7 +436,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
             <span>いちいち面倒なカメラアプリ (Build 2026.08.01)</span>
           </div>
           <div className="text-slate-400 text-[10px]">
-            最新アップデート: Google Driveバックアップを一時停止し端末バックアップに一本化・ギャラリー保存の容量対策 & バージョンv{APP_VERSION}更新
+            最新アップデート: 保存先フォルダの指定・領収書CSV出力の修正・撮影日でのファイル命名・書類の傾き補正・バックグラウンド解析キューに対応 & バージョンv{APP_VERSION}更新
           </div>
         </div>
       </div>

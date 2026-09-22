@@ -1,5 +1,17 @@
 apply plugin: 'com.android.application'
 
+// Release signing (see .github/workflows/android-release.yml and the "GitHub ActionsでAPKを自動
+// ビルド" section of the project README for how to configure this).
+// Local builds work fine without any of this - `./gradlew assembleRelease` just produces an
+// unsigned APK unless one of the two sources below is present:
+//   1. android/keystore.properties (untracked - for signing a release locally), or
+//   2. the RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD
+//      environment variables (how CI supplies the keystore, decoded from a GitHub Secret).
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def hasKeystoreProperties = keystorePropertiesFile.exists()
+def hasEnvSigning = System.getenv('RELEASE_STORE_FILE') != null
+def hasReleaseSigning = hasKeystoreProperties || hasEnvSigning
+
 android {
     namespace = "com.chinta44.autophotonamer"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,9 +20,9 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Keep in sync with src/version.ts (APP_VERSION).
-        // versionCode = major*10000 + minor*100 + patch  (1.7.1 -> 10701)
-        versionCode 10701
-        versionName "1.7.1"
+        // versionCode = major*10000 + minor*100 + patch  (1.8.0 -> 10800)
+        versionCode 10800
+        versionName "1.8.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,10 +30,32 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                if (hasKeystoreProperties) {
+                    def props = new Properties()
+                    keystorePropertiesFile.withInputStream { props.load(it) }
+                    storeFile rootProject.file(props['storeFile'])
+                    storePassword props['storePassword']
+                    keyAlias props['keyAlias']
+                    keyPassword props['keyPassword']
+                } else {
+                    storeFile file(System.getenv('RELEASE_STORE_FILE'))
+                    storePassword System.getenv('RELEASE_STORE_PASSWORD')
+                    keyAlias System.getenv('RELEASE_KEY_ALIAS')
+                    keyPassword System.getenv('RELEASE_KEY_PASSWORD')
+                }
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

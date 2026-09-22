@@ -28,6 +28,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Our own plugin (choose a save folder once, then save straight into it).
+        // Must be registered before super.onCreate().
+        registerPlugin(FolderSaverPlugin.class);
         super.onCreate(savedInstanceState);
         requestAppPermissionsIfNeeded();
     }

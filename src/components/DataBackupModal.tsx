@@ -15,6 +15,7 @@ import {
   DriveFileMeta,
 } from '../utils/driveService';
 import { PetProfile, SavedPhoto, NamingRuleConfig } from '../types';
+import { getFullDataUrl, PhotoWithOriginal } from '../utils/photoStore';
 import {
   Download,
   Upload,
@@ -35,6 +36,24 @@ import {
   ChevronUp
 } from 'lucide-react';
 
+/**
+ * For a local backup file, replaces each gallery thumbnail with its original-quality image
+ * (fetched from IndexedDB) attached as `fullDataUrl`, so restoring the backup does not
+ * permanently downgrade photo quality. Falls back to the thumbnail alone if the original
+ * is missing (should not normally happen).
+ */
+async function attachFullQualityImages(photos: SavedPhoto[]): Promise<PhotoWithOriginal[]> {
+  const out: PhotoWithOriginal[] = [];
+  for (const photo of photos) {
+    if (photo.fullStored) {
+      out.push({ ...photo, fullDataUrl: await getFullDataUrl(photo) });
+    } else {
+      out.push(photo);
+    }
+  }
+  return out;
+}
+
 interface DataBackupModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,7 +63,7 @@ interface DataBackupModalProps {
   onRestoreData: (
     restored: BackupDataPayload,
     mode: 'overwrite' | 'merge'
-  ) => { addedCount: number; skippedCount: number };
+  ) => Promise<{ addedCount: number; skippedCount: number }>;
   isAutoBackupEnabled: boolean;
   onToggleAutoBackup: (enabled: boolean) => void;
   lastBackupTime: string | null;
@@ -105,11 +124,16 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
     try {
       const now = new Date();
       const dateStr = getJSTDateString();
+      setStatusMessage({ type: 'success', text: '写真を元の画質でまとめています... (枚数が多いと少し時間がかかります)' });
+      // The gallery keeps only a thumbnail inline (the original lives in IndexedDB - see
+      // utils/photoStore.ts); a backup file should still preserve full quality, so the
+      // original is attached here as `fullDataUrl` and restored back into IndexedDB on import.
+      const photosForBackup = await attachFullQualityImages(savedPhotos);
       const payload: BackupDataPayload = {
         version: APP_VERSION,
         timestamp: now.toISOString(),
         petProfiles,
-        savedPhotos,
+        savedPhotos: photosForBackup,
         namingConfig,
       };
 
@@ -142,7 +166,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const payload: BackupDataPayload = JSON.parse(content);
@@ -151,7 +175,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
           throw new Error('ファイルの形式が正しくありません (ペット情報が見つかりません)');
         }
 
-        const { addedCount, skippedCount } = onRestoreData(payload, restoreMode);
+        const { addedCount, skippedCount } = await onRestoreData(payload, restoreMode);
 
         if (restoreMode === 'merge') {
           setStatusMessage({
@@ -252,7 +276,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
     setIsDriveProcessing(true);
     try {
       const payload = await downloadBackupFromDrive(accessToken, driveFileMeta.id);
-      const { addedCount, skippedCount } = onRestoreData(payload, restoreMode);
+      const { addedCount, skippedCount } = await onRestoreData(payload, restoreMode);
       if (restoreMode === 'merge') {
         setStatusMessage({
           type: 'success',

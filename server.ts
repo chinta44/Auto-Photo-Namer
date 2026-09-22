@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { resolvePhotoDate, normalizeAnalysis, mapGeminiError } from "./src/shared/analysisShared";
 
 dotenv.config();
 
@@ -72,13 +73,15 @@ app.post("/api/analyze-photo", async (req, res) => {
       ? `登録済みのペット一覧:\n` + petProfiles.map((p: any) => `- ID: ${p.id}, 名前: ${p.name}, 種類: ${p.species}, 特徴: ${p.breedOrDescription}`).join("\n")
       : "登録されたペットはありません。";
 
-    // Calculate current Japan Standard Time (JST) date to avoid UTC offset issues
-    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-    const yearJST = nowJST.getFullYear();
-    const monthJST = String(nowJST.getMonth() + 1).padStart(2, '0');
-    const dayJST = String(nowJST.getDate()).padStart(2, '0');
-    const todayYYYYMMDD = `${yearJST}${monthJST}${dayJST}`;
-    const todayYYYYMMDDHyphen = `${yearJST}-${monthJST}-${dayJST}`;
+    // Date that goes into the file name: the photo's own date when the client sends one
+    // (photos imported from the gallery), otherwise today's date in Japan Standard Time.
+    // (The variable names keep the old "today" wording; they now hold the photo date.)
+    const photoDate = resolvePhotoDate(req.body.capturedDate, new Date());
+    const yearJST = photoDate.year;
+    const monthJST = photoDate.month;
+    const dayJST = photoDate.day;
+    const todayYYYYMMDD = photoDate.compact;
+    const todayYYYYMMDDHyphen = photoDate.hyphen;
 
     const namingRulesText = namingConfig
       ? `命名ルールの希望: 日付フォーマット=${namingConfig.dateFormat} (選択されている日付表記: ${namingConfig.dateFormat === 'YYYY-MM-DD' ? todayYYYYMMDDHyphen : namingConfig.dateFormat === 'YYYYMMDD' ? todayYYYYMMDD : '日付なし'}), 区切り文字="${namingConfig.separator}", カテゴリ含む=${namingConfig.includeCategory}, 金額含む=${namingConfig.includeAmount}`
@@ -98,9 +101,9 @@ app.post("/api/analyze-photo", async (req, res) => {
     const prompt = `あなたはAndroidおよびスマートフォン向けの高精度写真自動命名AIアシスタントです。
 提供された画像を解析して、最適なファイル名と詳細情報を出力してください。${focusInstruction}${locationInstruction}
 
-★【超重要：本日の日本日付 (JST)】
-撮影・分析実行日: ${todayYYYYMMDD} (${yearJST}年${monthJST}月${dayJST}日)
-領収書等に明確な取引日付が印字されていない場合、ファイル名に含める日付は必ずこの本日日付(${todayYYYYMMDD} または ${todayYYYYMMDDHyphen})を使用してください。過去や未来の適当な日付を使用しないでください！
+★【超重要：ファイル名に使う日付】
+${photoDate.isCaptured ? '撮影日' : '撮影・分析実行日'}: ${todayYYYYMMDD} (${yearJST}年${monthJST}月${dayJST}日)
+領収書等に明確な取引日付が印字されていない場合、ファイル名に含める日付は必ずこの日付(${todayYYYYMMDD} または ${todayYYYYMMDDHyphen})を使用してください。過去や未来の適当な日付を使用しないでください！
 
 【分類ルール】
 1. 'food' (料理・グルメ・カフェ・外食): 飲食店での料理、スイーツ、飲み物、自作料理など。
@@ -249,14 +252,20 @@ JSONフォーマットで回答してください。`;
       throw new Error("Empty AI response");
     }
 
-    const result = JSON.parse(jsonText);
+    // Coerce into a well-formed result: the fallback model call has no response schema,
+    // so fields can be missing or oddly typed.
+    const result = normalizeAnalysis(JSON.parse(jsonText));
     res.json(result);
   } catch (err: any) {
     console.error("Error analyzing photo:", err);
-    // Return explicit error status if API key is wrong or request failed
-    res.status(500).json({
-      error: "ANALYSIS_FAILED",
-      message: `AI画像の分析中にエラーが発生しました: ${err.message || 'モデル通信エラー'}`
+    // Map the failure to a meaningful HTTP status so the client can decide whether to retry
+    // (429 / 5xx are retried automatically, 400 / 401 are not).
+    const mapped = mapGeminiError(err);
+    if (mapped.retryAfterSec) res.setHeader("Retry-After", String(mapped.retryAfterSec));
+    res.status(mapped.status).json({
+      error: mapped.error,
+      message: mapped.message,
+      ...(mapped.retryAfterSec ? { retryAfterSec: mapped.retryAfterSec } : {}),
     });
   }
 });

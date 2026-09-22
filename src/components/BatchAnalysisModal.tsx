@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { BatchPhotoItem, AnalysisResult, SavedPhoto, PetProfile, NamingRuleConfig, LocationData } from '../types';
+import React, { useMemo } from 'react';
+import { BatchPhotoItem, SavedPhoto, LocationData } from '../types';
 import {
-  Download,
   Save,
   Check,
   X,
   Sparkles,
   FolderDown,
-  CheckCircle2,
   AlertTriangle,
   Dog,
   Receipt,
@@ -17,19 +15,21 @@ import {
   MapPin,
   Utensils,
   Edit2,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { downloadImageWithPicker } from '../utils/fileSaveUtils';
-import { convertToJpegBase64, createAnalysisResizedCopy } from '../utils/imageUtils';
-import { apiUrl } from '../utils/apiConfig';
+import { AnalysisQueue } from '../utils/analysisQueue';
 
 interface BatchAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  queuedItems: BatchPhotoItem[];
-  petProfiles: PetProfile[];
-  namingConfig: NamingRuleConfig;
-  userApiKey: string;
+  /** ids of the photos this results screen shows, in capture order (a subset of `liveItems`). */
+  queuedItemIds: string[];
+  /** The shared background-analysis queue (see utils/analysisQueue.ts) - photos start analyzing
+   * the moment they are captured/imported, not when this modal opens. */
+  queue: AnalysisQueue;
+  /** Live snapshot of every item in the queue (from useAnalysisQueue at the App level). */
+  liveItems: BatchPhotoItem[];
   onSaveToGallery: (photos: SavedPhoto[]) => void;
   locationData: LocationData | null;
 }
@@ -37,178 +37,70 @@ interface BatchAnalysisModalProps {
 export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
   isOpen,
   onClose,
-  queuedItems: initialItems,
-  petProfiles,
-  namingConfig,
-  userApiKey,
+  queuedItemIds,
+  queue,
+  liveItems,
   onSaveToGallery,
   locationData,
 }) => {
-  const [items, setItems] = useState<BatchPhotoItem[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [globalStatusMessage, setGlobalStatusMessage] = useState<string | null>(null);
+  const items = useMemo(() => {
+    const byId = new Map(liveItems.map((i) => [i.id, i]));
+    return queuedItemIds.map((id) => byId.get(id)).filter((i): i is BatchPhotoItem => !!i);
+  }, [queuedItemIds, liveItems]);
 
-  useEffect(() => {
-    if (isOpen && initialItems.length > 0) {
-      setItems(
-        initialItems.map((item) => ({
-          ...item,
-          isAnalyzing: false,
-          isSaved: false,
-          isDownloaded: false,
-        }))
-      );
-      startBatchAnalysis(initialItems);
-    }
-  }, [isOpen]);
-
-  const startBatchAnalysis = async (batchList: BatchPhotoItem[]) => {
-    setIsProcessing(true);
-    setProgress({ current: 0, total: batchList.length });
-    setGlobalStatusMessage(`全${batchList.length}枚の写真をGemini AIで解析しています...`);
-
-    const updated = [...batchList];
-
-    for (let i = 0; i < updated.length; i++) {
-      const item = updated[i];
-      setProgress({ current: i + 1, total: updated.length });
-
-      // Mark current item as analyzing
-      setItems((prev) =>
-        prev.map((it) => (it.id === item.id ? { ...it, isAnalyzing: true } : it))
-      );
-
-      try {
-        const converted = await convertToJpegBase64(item.dataUrl);
-        const forAnalysis = await createAnalysisResizedCopy(converted.fullDataUrl);
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (userApiKey) {
-          headers['x-gemini-api-key'] = userApiKey;
-        }
-
-        const res = await fetch(apiUrl('/api/analyze-photo'), {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            imageBase64: forAnalysis.base64Data,
-            mimeType: forAnalysis.mimeType,
-            petProfiles,
-            namingConfig,
-            focusPoint: item.focusPoint,
-            location: locationData,
-            customApiKey: userApiKey,
-          }),
-        });
-
-        const data: AnalysisResult = await res.json();
-        const suggestedName = data.suggestedFilename || `photo_${i + 1}.jpg`;
-
-        setItems((prev) =>
-          prev.map((it) =>
-            it.id === item.id
-              ? {
-                  ...it,
-                  analysis: data,
-                  selectedFilename: suggestedName,
-                  isAnalyzing: false,
-                }
-              : it
-          )
-        );
-      } catch (err: any) {
-        console.error(`Error analyzing item ${i}:`, err);
-        setItems((prev) =>
-          prev.map((it) =>
-            it.id === item.id
-              ? {
-                  ...it,
-                  isAnalyzing: false,
-                  error: err.message || 'AI解析エラー',
-                }
-              : it
-          )
-        );
-      }
-    }
-
-    setIsProcessing(false);
-    setGlobalStatusMessage(`解析完了！それぞれのファイル名を確認して保存・ダウンロードできます。`);
-  };
+  const doneCount = items.filter((i) => i.status === 'done').length;
+  const errorCount = items.filter((i) => i.status === 'error').length;
+  const activeCount = items.filter((i) => i.status === 'queued' || i.status === 'analyzing' || i.status === 'retrying').length;
+  const downloadedCount = items.filter((i) => i.isDownloaded).length;
 
   const handleFilenameChange = (id: string, newName: string) => {
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, selectedFilename: newName } : it))
-    );
+    queue.patch(id, { selectedFilename: newName });
   };
 
   const handleSingleDownload = async (item: BatchPhotoItem) => {
     const filename = item.selectedFilename || item.analysis?.suggestedFilename || 'photo.jpg';
     const success = await downloadImageWithPicker(item.dataUrl, filename);
-    if (success) {
-      setItems((prev) =>
-        prev.map((it) => (it.id === item.id ? { ...it, isDownloaded: true } : it))
-      );
-    }
+    if (success) queue.patch(item.id, { isDownloaded: true });
   };
 
-  const handleSingleSave = (item: BatchPhotoItem) => {
-    if (!item.analysis) return;
+  const toSavedPhoto = (item: BatchPhotoItem): SavedPhoto | null => {
+    if (!item.analysis) return null;
     const filename = item.selectedFilename || item.analysis.suggestedFilename;
-    const savedPhoto: SavedPhoto = {
+    return {
       id: item.id,
       dataUrl: item.dataUrl,
       filename,
       category: item.analysis.category,
-      analysis: {
-        ...item.analysis,
-        suggestedFilename: filename,
-      },
+      analysis: { ...item.analysis, suggestedFilename: filename },
       timestamp: new Date().toLocaleString('ja-JP'),
       customTags: [],
       notes: '',
-      location: locationData || undefined,
+      location: item.location || locationData || undefined,
     };
+  };
 
-    onSaveToGallery([savedPhoto]);
-    setItems((prev) =>
-      prev.map((it) => (it.id === item.id ? { ...it, isSaved: true } : it))
-    );
+  const handleSingleSave = (item: BatchPhotoItem) => {
+    const saved = toSavedPhoto(item);
+    if (!saved) return;
+    onSaveToGallery([saved]);
+    queue.patch(item.id, { isSaved: true });
   };
 
   const handleBulkDownload = async () => {
     for (const item of items) {
       const filename = item.selectedFilename || item.analysis?.suggestedFilename || 'photo.jpg';
-      await downloadImageWithPicker(item.dataUrl, filename);
+      const success = await downloadImageWithPicker(item.dataUrl, filename);
+      if (success) queue.patch(item.id, { isDownloaded: true });
     }
-    setItems((prev) => prev.map((it) => ({ ...it, isDownloaded: true })));
   };
 
   const handleBulkSave = () => {
-    const toSave: SavedPhoto[] = items
-      .filter((it) => it.analysis)
-      .map((item) => {
-        const filename = item.selectedFilename || item.analysis!.suggestedFilename;
-        return {
-          id: item.id,
-          dataUrl: item.dataUrl,
-          filename,
-          category: item.analysis!.category,
-          analysis: {
-            ...item.analysis!,
-            suggestedFilename: filename,
-          },
-          timestamp: new Date().toLocaleString('ja-JP'),
-          customTags: [],
-          notes: '',
-          location: locationData || undefined,
-        };
-      });
-
-    if (toSave.length > 0) {
-      onSaveToGallery(toSave);
-      setItems((prev) => prev.map((it) => ({ ...it, isSaved: true })));
-    }
+    const toSave = items.map(toSavedPhoto).filter((p): p is SavedPhoto => !!p);
+    if (toSave.length === 0) return;
+    onSaveToGallery(toSave);
+    items.forEach((item) => {
+      if (item.analysis) queue.patch(item.id, { isSaved: true });
+    });
   };
 
   const getCategoryBadge = (category?: string) => {
@@ -283,7 +175,7 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
                 </p>
               ) : (
                 <p className="text-xs text-slate-400 mt-0.5">
-                  すべての写真をAIが自動識別・自動命名しました
+                  撮影・選択した順にバックグラウンドでAIが自動識別・自動命名します
                 </p>
               )}
             </div>
@@ -297,21 +189,25 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
         </div>
 
         {/* Status / Progress Banner */}
-        {isProcessing && (
+        {(activeCount > 0 || errorCount > 0) && (
           <div className="p-4 bg-indigo-950/60 border-b border-indigo-800/80 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-bold text-indigo-200">
               <span className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin" />
-                {globalStatusMessage}
+                {activeCount > 0 && <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin" />}
+                {activeCount > 0
+                  ? `バックグラウンドで解析中... (完了 ${doneCount}/${items.length})`
+                  : errorCount > 0
+                  ? `${errorCount}枚の解析に失敗しました。「再試行」から再解析できます。`
+                  : ''}
               </span>
               <span>
-                {progress.current} / {progress.total}
+                {doneCount} / {items.length}
               </span>
             </div>
             <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-indigo-500 h-full transition-all duration-300"
-                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                style={{ width: `${items.length > 0 ? (doneCount / items.length) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -319,111 +215,134 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
 
         {/* Modal Main Body */}
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          {items.map((item, idx) => (
-            <div
-              key={item.id}
-              className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center hover:border-slate-700 transition"
-            >
-              {/* Image Preview & Index */}
-              <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
-                <img
-                  src={item.dataUrl}
-                  alt={`Photo ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700 text-white font-mono font-bold text-xs flex items-center justify-center">
-                  {idx + 1}
-                </span>
-                {item.isAnalyzing && (
-                  <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center">
-                    <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin" />
-                  </div>
-                )}
-              </div>
-
-              {/* Analysis Details & Filename Input */}
-              <div className="flex-1 space-y-2.5 w-full">
-                <div className="flex flex-wrap items-center gap-2">
-                  {getCategoryBadge(item.analysis?.category)}
-                  <span className="font-bold text-white text-sm">
-                    {item.analysis?.detectedTitle || (item.isAnalyzing ? '解析中...' : '未解析')}
+          {items.map((item, idx) => {
+            const isBusy = item.status === 'analyzing' || item.status === 'retrying' || item.status === 'queued';
+            return (
+              <div
+                key={item.id}
+                className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center hover:border-slate-700 transition"
+              >
+                {/* Image Preview & Index */}
+                <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
+                  <img src={item.dataUrl} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                  <span className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700 text-white font-mono font-bold text-xs flex items-center justify-center">
+                    {idx + 1}
                   </span>
-                  {item.analysis?.details?.restaurantName && (
-                    <span className="text-xs text-amber-300 bg-amber-950/60 border border-amber-700/60 px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-amber-400" />
-                      {item.analysis.details.restaurantName}
-                    </span>
+                  {isBusy && (
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center">
+                      <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin" />
+                    </div>
                   )}
                 </div>
 
-                {/* Editable Filename Field */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-400 block flex items-center gap-1">
-                    <Edit2 className="w-3 h-3 text-indigo-400" />
-                    AI命名ファイル名 (編集可能)
-                  </label>
-                  <input
-                    type="text"
-                    value={item.selectedFilename || ''}
-                    onChange={(e) => handleFilenameChange(item.id, e.target.value)}
-                    placeholder="ファイル名を入力..."
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-xl text-xs font-mono font-bold text-indigo-200 outline-none transition"
-                  />
+                {/* Analysis Details & Filename Input */}
+                <div className="flex-1 space-y-2.5 w-full">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {getCategoryBadge(item.analysis?.category)}
+                    <span className="font-bold text-white text-sm">
+                      {item.analysis?.detectedTitle ||
+                        (item.status === 'retrying'
+                          ? `再試行中... (${item.attempt ?? 2}回目)`
+                          : item.status === 'analyzing'
+                          ? item.slow
+                            ? 'サーバー起動待ち...'
+                            : '解析中...'
+                          : item.status === 'error'
+                          ? '解析失敗'
+                          : '未解析')}
+                    </span>
+                    {item.analysis?.details?.restaurantName && (
+                      <span className="text-xs text-amber-300 bg-amber-950/60 border border-amber-700/60 px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        {item.analysis.details.restaurantName}
+                      </span>
+                    )}
+                  </div>
+
+                  {item.status === 'error' && (
+                    <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-800/60 text-rose-200 text-[11px] font-semibold flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        {item.error || 'AI解析エラー'}
+                      </span>
+                      <button
+                        onClick={() => queue.retry(item.id)}
+                        className="shrink-0 px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-bold flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        再試行
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Editable Filename Field */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-400 block flex items-center gap-1">
+                      <Edit2 className="w-3 h-3 text-indigo-400" />
+                      AI命名ファイル名 (編集可能)
+                    </label>
+                    <input
+                      type="text"
+                      value={item.selectedFilename || ''}
+                      onChange={(e) => handleFilenameChange(item.id, e.target.value)}
+                      placeholder="ファイル名を入力..."
+                      disabled={!item.analysis}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-xl text-xs font-mono font-bold text-indigo-200 outline-none transition disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* AI Explanation Summary */}
+                  {item.analysis?.explanation && (
+                    <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                      💡 {item.analysis.explanation}
+                    </p>
+                  )}
                 </div>
 
-                {/* AI Explanation Summary */}
-                {item.analysis?.explanation && (
-                  <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-900/80 p-2 rounded-xl border border-slate-800">
-                    💡 {item.analysis.explanation}
-                  </p>
-                )}
-              </div>
+                {/* Individual Action Buttons */}
+                <div className="flex md:flex-col gap-2 shrink-0 w-full md:w-auto justify-end">
+                  <button
+                    onClick={() => handleSingleDownload(item)}
+                    disabled={!item.analysis}
+                    className={`flex-1 md:flex-initial px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition disabled:opacity-40 ${
+                      item.isDownloaded
+                        ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    }`}
+                  >
+                    {item.isDownloaded ? <Check className="w-3.5 h-3.5" /> : <FolderDown className="w-3.5 h-3.5" />}
+                    <span>{item.isDownloaded ? '保存済み' : 'ダウンロード'}</span>
+                  </button>
 
-              {/* Individual Action Buttons */}
-              <div className="flex md:flex-col gap-2 shrink-0 w-full md:w-auto justify-end">
-                <button
-                  onClick={() => handleSingleDownload(item)}
-                  className={`flex-1 md:flex-initial px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition ${
-                    item.isDownloaded
-                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                  }`}
-                >
-                  {item.isDownloaded ? <Check className="w-3.5 h-3.5" /> : <FolderDown className="w-3.5 h-3.5" />}
-                  <span>{item.isDownloaded ? '保存済み' : 'ダウンロード'}</span>
-                </button>
-
-                <button
-                  onClick={() => handleSingleSave(item)}
-                  disabled={!item.analysis}
-                  className={`flex-1 md:flex-initial px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition ${
-                    item.isSaved
-                      ? 'bg-slate-800 text-indigo-400 border border-indigo-500/40'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40'
-                  }`}
-                >
-                  {item.isSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{item.isSaved ? 'アプリ保存済み' : 'アプリに保存'}</span>
-                </button>
+                  <button
+                    onClick={() => handleSingleSave(item)}
+                    disabled={!item.analysis}
+                    className={`flex-1 md:flex-initial px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                      item.isSaved
+                        ? 'bg-slate-800 text-indigo-400 border border-indigo-500/40'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40'
+                    }`}
+                  >
+                    {item.isSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>{item.isSaved ? 'アプリ保存済み' : 'アプリに保存'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Modal Footer Bulk Actions */}
         <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-slate-400 font-medium">
             全 <span className="font-bold text-white">{items.length}</span> 枚中{' '}
-            <span className="text-emerald-400 font-bold">
-              {items.filter((i) => i.isDownloaded).length}
-            </span>{' '}
-            枚をダウンロード保存済み
+            <span className="text-emerald-400 font-bold">{downloadedCount}</span> 枚をダウンロード保存済み
           </div>
 
           <div className="flex items-center gap-2.5">
             <button
               onClick={handleBulkDownload}
-              disabled={isProcessing}
+              disabled={doneCount === 0}
               className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-2xl transition shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-40"
             >
               <FolderDown className="w-4 h-4" />
@@ -432,7 +351,7 @@ export const BatchAnalysisModal: React.FC<BatchAnalysisModalProps> = ({
 
             <button
               onClick={handleBulkSave}
-              disabled={isProcessing}
+              disabled={doneCount === 0}
               className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-2xl transition shadow-lg shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-40"
             >
               <Save className="w-4 h-4" />

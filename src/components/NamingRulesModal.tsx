@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NamingRuleConfig, PhotoQuality } from '../types';
-import { Settings, FileCode, Folder, FolderCheck, RotateCcw, FolderPlus, Download, CheckCircle2, Camera } from 'lucide-react';
+import { Settings, FileCode, Folder, FolderCheck, RotateCcw, FolderPlus, Download, Share2, CheckCircle2, Camera } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import {
   getSavedDirectoryInfo,
   pickCustomSaveDirectory,
   resetToDefaultDownloadsDirectory,
 } from '../utils/fileSaveUtils';
+
+const isNative = Capacitor.isNativePlatform();
 
 interface NamingRulesProps {
   config: NamingRuleConfig;
@@ -81,18 +84,20 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                 : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
             }`}>
-              {savedFolderName ? <FolderCheck className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+              {savedFolderName ? <FolderCheck className="w-5 h-5" /> : isNative ? <Share2 className="w-5 h-5" /> : <Download className="w-5 h-5" />}
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-white flex items-center gap-1.5">
                 現在の保存先:
                 <span className={savedFolderName ? 'text-emerald-400 font-extrabold' : 'text-indigo-300 font-extrabold'}>
-                  {savedFolderName ? `📁 ${savedFolderName}` : 'ダウンロード（Downloads）フォルダ'}
+                  {savedFolderName ? `📁 ${savedFolderName}` : isNative ? '未設定（保存のたびに共有メニューで選択）' : 'ダウンロード（Downloads）フォルダ'}
                 </span>
               </p>
               <p className="text-[11px] text-slate-400 leading-relaxed">
                 {savedFolderName
-                  ? '撮影・保存ボタンを押すと、毎回ダイアログを表示せず上記フォルダへダイレクト保存されます。'
+                  ? '撮影・保存ボタンを押すと、毎回ダイアログを表示せず上記フォルダへ自動保存されます。'
+                  : isNative
+                  ? 'フォルダを指定すると、保存のたびに共有メニューを開かず、そのフォルダへ自動保存されるようになります。'
                   : 'デフォルト状態です。撮影・保存ボタンを押すと、毎回ダイアログを表示せずブラウザ標準の「ダウンロード」フォルダへ自動保存されます。'}
               </p>
             </div>
@@ -110,10 +115,11 @@ export const NamingRulesModal: React.FC<NamingRulesProps> = ({ config, onUpdateC
             {savedFolderName && (
               <button
                 onClick={handleResetDirectory}
+                title={isNative ? '共有メニューでの保存に戻す' : 'デフォルト (ダウンロード) に戻す'}
                 className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700 active:scale-95"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-                <span>デフォルト (ダウンロード) に戻す</span>
+                <span>{isNative ? '共有メニューでの保存に戻す' : 'デフォルト (ダウンロード) に戻す'}</span>
               </button>
             )}
           </div>

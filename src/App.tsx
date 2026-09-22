@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { CameraView } from './components/CameraView';
@@ -17,12 +17,14 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { DataBackupModal } from './components/DataBackupModal';
 import { ThemeSettingsModal, ThemeId } from './components/ThemeSettingsModal';
 import { AnalysisResult, PetProfile, SavedPhoto, NamingRuleConfig, FocusPoint, BatchPhotoItem, LocationData } from './types';
-import { convertToJpegBase64, createAnalysisResizedCopy, createGalleryCopy } from './utils/imageUtils';
-import { apiUrl } from './utils/apiConfig';
+import { analyzePhoto, AnalyzeError } from './utils/analyzeClient';
+import { useAnalysisQueue, Analyzer } from './utils/analysisQueue';
+import { wakeServer } from './utils/serverWake';
+import { loadLibrary, saveLibrary, storePhoto, deleteFullImages, importPhotos } from './utils/photoStore';
 import { initDriveAuth, getAccessToken, uploadBackupToDrive, BackupDataPayload } from './utils/driveService';
 import { checkForAppUpdate, CURRENT_APP_VERSION, UpdateInfo } from './utils/updateChecker';
 import { APP_VERSION } from './version';
-import { Sparkles, Camera, Key, Download, X, AlertTriangle } from 'lucide-react';
+import { Sparkles, Camera, Key, Download, X, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const DEFAULT_PETS: PetProfile[] = [
   {
@@ -57,14 +59,16 @@ export default function App() {
     }
   });
 
-  const [savedPhotos, setSavedPhotos] = useState<SavedPhoto[]>(() => {
-    try {
-      const saved = localStorage.getItem('auto_photo_saved_library');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Photos are stored in IndexedDB (see utils/photoStore.ts): the original-quality image plus a
+  // small thumbnail per photo, so the gallery is not limited by localStorage's ~5MB quota.
+  const [savedPhotos, setSavedPhotos] = useState<SavedPhoto[]>([]);
+  const libraryLoadedRef = useRef(false);
+  useEffect(() => {
+    loadLibrary().then(({ photos }) => {
+      setSavedPhotos(photos);
+      libraryLoadedRef.current = true;
+    });
+  }, []);
 
   const [namingConfig, setNamingConfig] = useState<NamingRuleConfig>(() => {
     try {
@@ -103,6 +107,7 @@ export default function App() {
     checkForAppUpdate().then((info) => {
       if (info.available) setUpdateInfo(info);
     });
+    wakeServer(true);
   }, []);
 
   useEffect(() => {
@@ -186,10 +191,10 @@ export default function App() {
   //       'merge' only merges pet profiles into the existing ones,
   //       skipping any incoming pet whose id already exists locally.
   //       savedPhotos / namingConfig are left untouched in merge mode.
-  const handleRestoreData = (
+  const handleRestoreData = async (
     payload: BackupDataPayload,
     mode: 'overwrite' | 'merge' = 'overwrite'
-  ): { addedCount: number; skippedCount: number } => {
+  ): Promise<{ addedCount: number; skippedCount: number }> => {
     if (mode === 'merge') {
       let addedCount = 0;
       let skippedCount = 0;
@@ -217,7 +222,9 @@ export default function App() {
       setPetProfiles(payload.petProfiles);
     }
     if (payload.savedPhotos && Array.isArray(payload.savedPhotos)) {
-      setSavedPhotos(payload.savedPhotos);
+      // Backup files predate IndexedDB storage, so photo data always arrives inline;
+      // importPhotos() moves anything large into IndexedDB and keeps only a thumbnail inline.
+      setSavedPhotos(await importPhotos(payload.savedPhotos));
     }
     if (payload.namingConfig) {
       setNamingConfig(payload.namingConfig);
@@ -230,6 +237,9 @@ export default function App() {
   const [currentImageDataUrl, setCurrentImageDataUrl] = useState<string | null>(null);
   const [currentAnalysis, setCurrentAnalysis] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  // "waiting to retry" / "server is slow to respond" notices shown during handleCaptureImage
+  // (see utils/analyzeClient.ts - retries happen automatically, this is just user feedback).
+  const [analysisNotice, setAnalysisNotice] = useState<string | null>(null);
 
   // Sync state to LocalStorage
   useEffect(() => {
@@ -242,14 +252,16 @@ export default function App() {
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('auto_photo_saved_library', JSON.stringify(savedPhotos));
-      setStorageWarning(null);
-    } catch (e) {
+    // Skip the very first render: it fires before loadLibrary() above has a chance to run,
+    // which would otherwise overwrite the stored gallery with an empty list.
+    if (!libraryLoadedRef.current) return;
+    saveLibrary(savedPhotos).then((ok) => {
       setStorageWarning(
-        '端末の保存容量がいっぱいのため、ギャラリーの最新の変更を保存できませんでした。このままアプリを閉じると、新しく保存した写真が消える可能性があります。不要な写真を削除するか、ヘッダーの「データバックアップ＆復元」からバックアップを書き出してください。'
+        ok
+          ? null
+          : '端末の保存容量がいっぱいのため、ギャラリーの最新の変更を保存できませんでした。このままアプリを閉じると、新しく保存した写真が消える可能性があります。不要な写真を削除するか、ヘッダーの「データバックアップ＆復元」からバックアップを書き出してください。'
       );
-    }
+    });
   }, [savedPhotos]);
 
   useEffect(() => {
@@ -274,9 +286,46 @@ export default function App() {
   const [batchQueuedItems, setBatchQueuedItems] = useState<BatchPhotoItem[]>([]);
   const [batchLocationData, setBatchLocationData] = useState<LocationData | null>(null);
 
-  // Main Photo Analysis Handler
-  const handleCaptureImage = async (dataUrl: string, focusPoint?: FocusPoint, location?: LocationData | null) => {
-    console.log('[SmartName][App] handleCaptureImage called, hasApiKey=', !!userApiKey, 'dataUrl length=', dataUrl?.length);
+  // Background analysis queue: photos captured/imported in multi-shot mode start analyzing the
+  // moment they are added (see CameraView's onQueuePhotos), not only once the batch modal is
+  // opened, so shooting is never blocked on waiting for AI results. Failures retry automatically.
+  const batchAnalyzer: Analyzer = useCallback(
+    async (item, hooks) => {
+      if (!userApiKey) {
+        const err = new AnalyzeError('Gemini APIキーが設定されていません。', { code: 'API_KEY_REQUIRED', retryable: false });
+        throw err;
+      }
+      const { analysis } = await analyzePhoto({
+        dataUrl: item.dataUrl,
+        petProfiles,
+        namingConfig,
+        userApiKey,
+        focusPoint: item.focusPoint,
+        location: item.location ?? batchLocationData,
+        capturedDate: item.capturedDate,
+        onRetry: hooks.onRetry,
+        onSlow: hooks.onSlow,
+      });
+      return analysis;
+    },
+    [userApiKey, petProfiles, namingConfig, batchLocationData]
+  );
+  const { queue: batchQueue, items: batchQueueItems } = useAnalysisQueue(batchAnalyzer, () => setIsApiKeyModalOpen(true));
+  const batchQueueItemsById = useMemo(() => {
+    const map = new Map<string, BatchPhotoItem>();
+    batchQueueItems.forEach((i) => map.set(i.id, i));
+    return map;
+  }, [batchQueueItems]);
+
+  // Main Photo Analysis Handler (single-shot / gallery-single-import path).
+  // Retries, timeouts and the "server is slow" notice are all handled by analyzeClient.analyzePhoto -
+  // see that file for the Render free-plan cold-start note.
+  const handleCaptureImage = async (
+    dataUrl: string,
+    focusPoint?: FocusPoint,
+    location?: LocationData | null,
+    capturedDate?: string | null
+  ) => {
     if (!userApiKey) {
       setIsApiKeyModalOpen(true);
       setAnalysisError('写真の解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
@@ -285,78 +334,80 @@ export default function App() {
 
     setIsAnalyzing(true);
     setAnalysisError(null);
+    setAnalysisNotice(null);
+    wakeServer();
 
     try {
-      const converted = await convertToJpegBase64(dataUrl);
-      setCurrentImageDataUrl(converted.fullDataUrl);
-
-      // Send a downscaled copy to Gemini for speed; the full-resolution
-      // photo (converted.fullDataUrl, set above) is still what gets saved.
-      const forAnalysis = await createAnalysisResizedCopy(converted.fullDataUrl);
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (userApiKey) {
-        headers['x-gemini-api-key'] = userApiKey;
-      }
-
-      const res = await fetch(apiUrl('/api/analyze-photo'), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          imageBase64: forAnalysis.base64Data,
-          mimeType: forAnalysis.mimeType,
-          petProfiles,
-          namingConfig,
-          focusPoint,
-          location,
-          customApiKey: userApiKey,
-        }),
+      const { analysis } = await analyzePhoto({
+        dataUrl,
+        petProfiles,
+        namingConfig,
+        userApiKey,
+        focusPoint,
+        location,
+        capturedDate,
+        onConverted: setCurrentImageDataUrl,
+        onRetry: (info) =>
+          setAnalysisNotice(`サーバーが混み合っています。自動で再試行します (${info.attempt}/${info.max}回目)...`),
+        onSlow: () => setAnalysisNotice('サーバーの起動待ちのようです。もうしばらくお待ちください...'),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.error === 'API_KEY_REQUIRED') {
-          setIsApiKeyModalOpen(true);
-        }
-        throw new Error(data.message || `サーバーエラーが発生しました (${res.status})`);
-      }
-
-      setCurrentAnalysis(data as AnalysisResult);
+      setCurrentAnalysis(analysis);
     } catch (err: any) {
       console.error('Failed to analyze photo:', err);
+      if (err instanceof AnalyzeError && (err.code === 'API_KEY_REQUIRED' || err.code === 'API_KEY_INVALID')) {
+        setIsApiKeyModalOpen(true);
+      }
       setAnalysisError(err.message || 'AI解析処理でエラーが発生しました。もう一度お試しください。');
     } finally {
       setIsAnalyzing(false);
+      setAnalysisNotice(null);
     }
   };
 
+  // Adds photos to the background queue as soon as they are captured/imported (multi-shot mode) -
+  // analysis starts immediately, while the user is still free to keep shooting.
+  const handleQueuePhotosForAnalysis = (items: BatchPhotoItem[], location?: LocationData | null) => {
+    if (!userApiKey) {
+      setIsApiKeyModalOpen(true);
+      setAnalysisError('一括写真解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
+      return;
+    }
+    if (location) setBatchLocationData(location);
+    batchQueue.add(items);
+  };
+
+  // Opens the results screen for the current queue (most items are typically already
+  // analyzing or done in the background by the time the user taps this).
   const handleStartBatchAnalysis = (items: BatchPhotoItem[], location?: LocationData | null) => {
     if (!userApiKey) {
       setIsApiKeyModalOpen(true);
       setAnalysisError('一括写真解析にはご自身のGemini APIキーが必要です。画面上のキー設定から無料APIキーを入力してください。');
       return;
     }
+    if (location) setBatchLocationData(location);
+    // Fallback: pick up any item that, for whatever reason, never made it into the
+    // background queue (e.g. it was added before the queue was ready).
+    const missing = items.filter((i) => !batchQueue.has(i.id));
+    if (missing.length > 0) batchQueue.add(missing);
     setBatchQueuedItems(items);
-    setBatchLocationData(location || null);
     setIsBatchModalOpen(true);
   };
 
-  // The gallery keeps a downsized copy (see createGalleryCopy) so it fits in localStorage.
+  // The original-quality photo goes to IndexedDB; only a small thumbnail is kept inline (see photoStore.ts).
   const handleSaveToGallery = async (photo: SavedPhoto) => {
-    const dataUrl = await createGalleryCopy(photo.dataUrl);
-    setSavedPhotos((prev) => [{ ...photo, dataUrl }, ...prev]);
+    const stored = await storePhoto(photo);
+    setSavedPhotos((prev) => [stored, ...prev]);
   };
 
   const handleSaveMultipleToGallery = async (photos: SavedPhoto[]) => {
-    const shrunk: SavedPhoto[] = [];
+    const stored: SavedPhoto[] = [];
     for (const photo of photos) {
       // One at a time to keep peak memory low on phones.
-      shrunk.push({ ...photo, dataUrl: await createGalleryCopy(photo.dataUrl) });
+      stored.push(await storePhoto(photo));
     }
     setSavedPhotos((prev) => {
       const existingIds = new Set(prev.map((p) => p.id));
-      const newUnique = shrunk.filter((p) => !existingIds.has(p.id));
+      const newUnique = stored.filter((p) => !existingIds.has(p.id));
       return [...newUnique, ...prev];
     });
   };
@@ -371,6 +422,7 @@ export default function App() {
 
   const handleDeletePhoto = (id: string) => {
     setSavedPhotos((prev) => prev.filter((p) => p.id !== id));
+    void deleteFullImages([id]);
   };
 
   return (
@@ -391,6 +443,13 @@ export default function App() {
 
       {/* Main View Area */}
       <main className="flex-1 p-3 sm:p-5 md:p-8 max-w-6xl mx-auto w-full space-y-6 pb-28">
+        {analysisNotice && !analysisError && (
+          <div className="p-3.5 bg-indigo-950/60 border border-indigo-800 text-indigo-200 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-xl backdrop-blur-md">
+            <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
+            <span>{analysisNotice}</span>
+          </div>
+        )}
+
         {analysisError && (
           <div className="p-4 bg-red-950/60 border border-red-800 text-red-200 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-xl backdrop-blur-md">
             <span>{analysisError}</span>
@@ -491,7 +550,12 @@ export default function App() {
             <CameraView
               onCaptureImage={handleCaptureImage}
               onStartBatchAnalysis={handleStartBatchAnalysis}
+              onQueuePhotos={handleQueuePhotosForAnalysis}
+              onRemoveQueuedPhoto={(id) => batchQueue.remove(id)}
+              onClearQueuedPhotos={() => batchQueue.clear()}
+              queueStatusById={batchQueueItemsById}
               isAnalyzing={isAnalyzing}
+              analysisNotice={analysisNotice}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               savedCount={savedPhotos.length}
@@ -542,14 +606,13 @@ export default function App() {
         />
       )}
 
-      {/* Batch Analysis Modal (Multiple Photos) */}
+      {/* Batch Analysis Modal (Multiple Photos) - shows the live background queue */}
       <BatchAnalysisModal
         isOpen={isBatchModalOpen}
         onClose={() => setIsBatchModalOpen(false)}
-        queuedItems={batchQueuedItems}
-        petProfiles={petProfiles}
-        namingConfig={namingConfig}
-        userApiKey={userApiKey}
+        queuedItemIds={batchQueuedItems.map((i) => i.id)}
+        queue={batchQueue}
+        liveItems={batchQueueItems}
         onSaveToGallery={handleSaveMultipleToGallery}
         locationData={batchLocationData}
       />

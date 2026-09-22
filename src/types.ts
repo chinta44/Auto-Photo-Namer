@@ -61,6 +61,11 @@ export interface SavedPhoto {
   customTags: string[];
   notes: string;
   location?: LocationData;
+  /**
+   * true when the original-quality photo is kept in IndexedDB (see utils/photoStore.ts)
+   * and `dataUrl` is only a small thumbnail for the gallery grid.
+   */
+  fullStored?: boolean;
 }
 
 export interface BatchPhotoItem {
@@ -73,6 +78,16 @@ export interface BatchPhotoItem {
   selectedFilename?: string;
   isSaved?: boolean;
   isDownloaded?: boolean;
+  /** Background analysis queue state (see utils/analysisQueue.ts). */
+  status?: 'queued' | 'analyzing' | 'retrying' | 'done' | 'error';
+  /** Which attempt is running (2..max) while status === 'retrying'. */
+  attempt?: number;
+  /** True when the server is taking unusually long (e.g. free-plan cold start). */
+  slow?: boolean;
+  /** Date the photo was taken ("YYYY-MM-DD"), used in the file name. Omitted = today. */
+  capturedDate?: string | null;
+  /** Location at the moment this photo was queued. */
+  location?: LocationData | null;
 }
 
 export type PhotoQuality = 'high' | 'medium' | 'low';

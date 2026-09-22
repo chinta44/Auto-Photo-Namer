@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { SavedPhoto, PhotoCategory } from '../types';
 import { Download, Copy, Trash2, Search, Filter, FileSpreadsheet, Tag, Receipt, Dog, Package, FileText, HelpCircle, Check, FolderDown, Utensils, MapPin } from 'lucide-react';
-import { downloadImageWithPicker } from '../utils/fileSaveUtils';
+import { downloadImageWithPicker, saveBlobToConfiguredLocation } from '../utils/fileSaveUtils';
+import { getFullDataUrl } from '../utils/photoStore';
+import { buildReceiptCsv } from '../utils/csvExport';
+import { getJSTDateString } from '../utils/dateUtils';
 
 interface PhotoGalleryProps {
   photos: SavedPhoto[];
@@ -47,36 +50,29 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onDeletePhot
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // The gallery grid only keeps a thumbnail inline (see utils/photoStore.ts); the original-quality
+  // photo is fetched from IndexedDB right before it is actually saved/downloaded.
   const handleDownload = async (photo: SavedPhoto) => {
-    const success = await downloadImageWithPicker(photo.dataUrl, photo.filename);
+    const fullDataUrl = await getFullDataUrl(photo);
+    const success = await downloadImageWithPicker(fullDataUrl, photo.filename);
     if (success) {
       setDownloadedPhotoIds((prev) => (prev.includes(photo.id) ? prev : [...prev, photo.id]));
     }
   };
 
-  const handleExportReceiptsCSV = () => {
+  const handleExportReceiptsCSV = async () => {
     const receiptPhotos = photos.filter((p) => p.category === 'receipt');
     if (receiptPhotos.length === 0) {
       alert('保存された領収書写真がありません。');
       return;
     }
-
-    let csvContent = 'data:text/csv;charset=utf-8,\uFEFF'; // BOM for Excel
-    csvContent += '日時,店舗名,金額,ファイル名,メモ\n';
-
-    receiptPhotos.forEach((p) => {
-      const store = p.analysis.details.receiptStore || p.analysis.detectedTitle || '不明';
-      const amount = p.analysis.details.receiptAmount || '0円';
-      csvContent += `"${p.timestamp}","${store}","${amount}","${p.filename}","${p.notes || ''}"\n`;
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `領収書一覧_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csv = buildReceiptCsv(receiptPhotos);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const filename = `領収書一覧_${getJSTDateString()}.csv`;
+    const result = await saveBlobToConfiguredLocation(blob, filename, 'text/csv;charset=utf-8');
+    if (!result.success) {
+      alert(`CSVの保存に失敗しました: ${result.error || ''}`);
+    }
   };
 
   return (
