@@ -83,12 +83,12 @@ jobs:
         if: steps.check_release.outputs.skip != 'true'
         run: npm run build
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         if: steps.check_release.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Android SDK
         if: steps.check_release.outputs.skip != 'true'
