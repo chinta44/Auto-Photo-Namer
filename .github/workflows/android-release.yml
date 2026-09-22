@@ -1,0 +1,160 @@
+# Builds a signed release APK and publishes it as a GitHub Release whenever
+# src/version.ts is bumped on main. The in-app update checker
+# (src/utils/updateChecker.ts) polls GitHub's "latest release" API and looks
+# for a .apk asset there, so this is what makes the in-app update banner work.
+#
+# One-time setup required before this can sign a release - see the four
+# repository secrets referenced below (Settings > Secrets and variables >
+# Actions > New repository secret):
+#   ANDROID_KEYSTORE_BASE64   base64 of your .jks/.keystore file
+#                             (e.g. `base64 -w0 my-release-key.jks` on Linux/Mac,
+#                             or `certutil -encode my-release-key.jks tmp.b64` on
+#                             Windows, then strip the BEGIN/END lines)
+#   ANDROID_KEYSTORE_PASSWORD the keystore's password
+#   ANDROID_KEY_ALIAS         the key alias inside the keystore
+#   ANDROID_KEY_PASSWORD      that key's password
+#
+# Without these four secrets, this workflow still builds the app and verifies
+# it compiles, but uploads only an unsigned APK as a workflow artifact (Actions
+# tab > this run > Artifacts) instead of publishing a GitHub Release - an
+# unsigned APK cannot be installed on a device, and publishing one as the
+# "latest" release would make the in-app updater point users to a file they
+# can't install.
+name: Android Release
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'src/version.ts'
+      - '.github/workflows/android-release.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read app version from src/version.ts
+        id: version
+        run: |
+          VERSION=$(grep -oP "APP_VERSION\s*=\s*'\K[^']+" src/version.ts)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read APP_VERSION from src/version.ts"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $VERSION (tag v$VERSION)"
+
+      - name: Skip if this version was already released
+        id: check_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.version.outputs.tag }} already exists - skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_release.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install web dependencies
+        if: steps.check_release.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Build web assets
+        if: steps.check_release.outputs.skip != 'true'
+        run: npm run build
+
+      - name: Set up JDK 17
+        if: steps.check_release.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        if: steps.check_release.outputs.skip != 'true'
+        uses: android-actions/setup-android@v4
+
+      - name: Install the exact SDK platform/build-tools this project targets
+        if: steps.check_release.outputs.skip != 'true'
+        run: |
+          COMPILE_SDK=$(grep -oP 'compileSdkVersion\s*=\s*\K[0-9]+' android/variables.gradle)
+          echo "compileSdk=$COMPILE_SDK"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-$COMPILE_SDK" "build-tools;$COMPILE_SDK.0.0"
+
+      - name: cap sync android
+        if: steps.check_release.outputs.skip != 'true'
+        run: npx cap sync android
+
+      - name: Decode release keystore
+        if: steps.check_release.outputs.skip != 'true'
+        id: keystore
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set - building an UNSIGNED apk (workflow artifact only, no GitHub Release will be published). See the comment at the top of this workflow file for setup steps."
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release APK
+        if: steps.check_release.outputs.skip != 'true'
+        working-directory: android
+        env:
+          RELEASE_STORE_FILE: ${{ steps.keystore.outputs.has_secrets == 'true' && format('{0}/release.jks', runner.temp) || '' }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Locate the built APK
+        if: steps.check_release.outputs.skip != 'true'
+        id: apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::No APK found under android/app/build/outputs/apk/release"
+            exit 1
+          fi
+          DEST="AutoPhotoNamer-${{ steps.version.outputs.tag }}.apk"
+          cp "$APK_PATH" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      # Unsigned build (no secrets yet): upload as a workflow artifact so the build is still
+      # verified end-to-end, but do NOT publish a release - see the note at the top of this file.
+      - name: Upload unsigned APK as a build artifact
+        if: steps.check_release.outputs.skip != 'true' && steps.keystore.outputs.has_secrets != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.path }} (unsigned)
+          path: ${{ steps.apk.outputs.path }}
+
+      # Signed build: publish a GitHub Release with the APK attached. This is what the in-app
+      # update checker looks for - it must be a real (non-draft, non-prerelease) release for
+      # GitHub's "latest release" API to return it.
+      - name: Publish GitHub Release
+        if: steps.check_release.outputs.skip != 'true' && steps.keystore.outputs.has_secrets == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.apk.outputs.path }}
