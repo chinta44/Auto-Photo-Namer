@@ -68,6 +68,7 @@ jobs:
         if: steps.check_release.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
+          # Capacitor's CLI (used by "npx cap sync android" below) requires Node >= 22.
           node-version: '22'
           # No cache: 'npm' here - this project's lock file is bun.lock, not
           # package-lock.json, so npm's built-in cache action has nothing to key off.
@@ -125,7 +126,11 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
+        # chmod first: gradlew can lose its executable bit when uploaded through GitHub's
+        # web UI (browser uploads don't preserve unix file permissions).
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
 
       - name: Locate the built APK
         if: steps.check_release.outputs.skip != 'true'
