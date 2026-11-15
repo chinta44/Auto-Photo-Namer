@@ -133,12 +133,13 @@ ${photoDate.isCaptured ? '撮影日' : '撮影・分析実行日'}: ${todayYYYYM
 JSONフォーマットで回答してください。`;
 
     let response;
-    const PRIMARY_TIMEOUT_MS = 12000; // if gemini-3.6-flash hasn't responded in 12s, fall back sooner instead of waiting indefinitely
+    const PRIMARY_TIMEOUT_MS = 12000; // if gemini-3.5-flash-lite hasn't responded in 12s, fall back sooner instead of waiting indefinitely
+    const FALLBACK_TIMEOUT_MS = 20000; // cap the fallback too, so a hung fallback cannot stall until the client's 90s timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PRIMARY_TIMEOUT_MS);
     try {
       response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.5-flash-lite",
         contents: [
           {
             inlineData: {
@@ -227,9 +228,12 @@ JSONフォーマットで回答してください。`;
       clearTimeout(timeoutId);
     } catch (primaryErr: any) {
       clearTimeout(timeoutId);
-      console.warn("Primary model gemini-3.6-flash failed or timed out, trying gemini-flash-latest fallback...", primaryErr.message);
+      console.warn("Primary model gemini-3.5-flash-lite failed or timed out, trying gemini-3.8-flash fallback...", primaryErr.message);
+      const fallbackController = new AbortController();
+      const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), FALLBACK_TIMEOUT_MS);
+      try {
       response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.8-flash",
         contents: [
           {
             inlineData: {
@@ -242,9 +246,13 @@ JSONフォーマットで回答してください。`;
           },
         ],
         config: {
+          abortSignal: fallbackController.signal,
           responseMimeType: "application/json",
         },
       });
+      } finally {
+        clearTimeout(fallbackTimeoutId);
+      }
     }
 
     const jsonText = response.text;
