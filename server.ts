@@ -124,6 +124,14 @@ ${photoDate.isCaptured ? '撮影日' : '撮影・分析実行日'}: ${todayYYYYM
 6. 'other' (その他・風景): 上記に当てはまらない風景、建物など。
    例: "東京タワー_夜景.jpg", "富士山_山頂.jpg"
 
+【自動車が写っている場合の追加ルール】
+- 自動車が主な被写体の場合（分類が 'other' や 'product' の場合を含む）、ボディやライトの形状、エンブレム、バッジなどの手がかりからメーカー名と車種名を特定し、details の vehicleMaker と vehicleModel に入れてください。
+- 命名候補（alternativeNames）の少なくとも1つには「メーカー名_車種名」を含めてください。可能であれば suggestedFilename にも含めてください（日付などの命名規則は通常どおり守ってください）。
+  例: "アウディ_A6_駐車場_${todayYYYYMMDD}.jpg"
+- グレード（例: 45 TFSI など）は、リアなどのバッジ文字がはっきり読み取れる場合にだけ vehicleGrade に入れ、命名に含めてもかまいません。バッジが読めない・写っていない場合は絶対に推測で入れず、vehicleGrade は「不明」としてください（見た目が同じでグレード違いの車種が多いため）。
+- explanation には、車種を推定した根拠（ライト形状・バッジなど）と、グレードが判断できたかどうかを短く含めてください。
+  例: 「リアのライト形状とエンブレムからアウディ A6と推定しました。グレードのバッジは読み取れなかったため不明です。」
+
 【ファイル名の命名要件】
 - OSファイル名として安全な文字のみを使用（記号は _ や - のみ）。
 - ファイル拡張子は .jpg または .png
@@ -196,6 +204,9 @@ JSONフォーマットで回答してください。`;
                   productBrand: { type: Type.STRING },
                   documentType: { type: Type.STRING },
                   documentSummary: { type: Type.STRING },
+                  vehicleMaker: { type: Type.STRING, description: "自動車のメーカー名 (例: アウディ, トヨタ)。自動車が被写体でない場合は空文字" },
+                  vehicleModel: { type: Type.STRING, description: "自動車の車種名 (例: A6, プリウス)。特定できない場合は空文字" },
+                  vehicleGrade: { type: Type.STRING, description: "自動車のグレード名。バッジ文字が明確に読み取れる場合のみ記入し、読めない場合は「不明」" },
                   restaurantName: { type: Type.STRING, description: "特定された店舗名・レストラン名" },
                   foodDishName: { type: Type.STRING, description: "特定された料理・メニュー名" },
                   locationAddress: { type: Type.STRING, description: "関連する住所またはエリア" },
